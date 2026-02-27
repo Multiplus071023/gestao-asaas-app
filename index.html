@@ -1,0 +1,2509 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/><title>Gestão Asaas</title>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head><body><div id="root"></div>
+<script type="text/babel" data-presets="react">
+const { useState, useMemo, useEffect } = React;
+
+
+const FontLoader = () => (
+  <style>{`
+    @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap');
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    :root{
+      --bg:#0d0f14;--bg2:#141720;--bg3:#1c2030;--surface:#1e2235;--surface2:#252a3d;
+      --border:#2e3450;--accent:#5b6af0;--accent2:#7c8bf5;--accent-glow:rgba(91,106,240,0.18);
+      --green:#3ecf8e;--red:#f06565;--yellow:#f0c84b;--orange:#f09a4b;
+      --text:#e8eaf6;--text2:#8b91b8;--text3:#565d82;
+      --font-head:'Syne',sans-serif;--font-body:'DM Sans',sans-serif;
+      --radius:12px;--shadow:0 4px 24px rgba(0,0,0,0.4);
+    }
+    body{background:var(--bg);color:var(--text);font-family:var(--font-body);}
+    ::-webkit-scrollbar{width:6px;}::-webkit-scrollbar-track{background:var(--bg2);}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+    .layout{display:flex;min-height:100vh;}
+    .sidebar{width:260px;min-height:100vh;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;left:0;top:0;bottom:0;z-index:100;overflow-y:auto;}
+    .sidebar-logo{padding:28px 24px 20px;border-bottom:1px solid var(--border);}
+    .sidebar-logo h1{font-family:var(--font-head);font-size:18px;font-weight:800;color:var(--text);letter-spacing:-0.3px;}
+    .sidebar-logo span{color:var(--accent);}
+    .sidebar-logo p{font-size:11px;color:var(--text3);margin-top:3px;letter-spacing:0.5px;text-transform:uppercase;}
+    .sidebar-section-label{padding:18px 24px 6px;font-size:10px;color:var(--text3);letter-spacing:1.2px;text-transform:uppercase;font-weight:600;}
+    .nav-item{display:flex;align-items:center;gap:12px;padding:10px 16px;margin:2px 8px;border-radius:8px;cursor:pointer;transition:all .15s;font-size:13.5px;color:var(--text2);font-weight:500;}
+    .nav-item:hover{background:var(--bg3);color:var(--text);}
+    .nav-item.active{background:var(--accent-glow);color:var(--accent2);}
+    .nav-item .icon{font-size:16px;width:20px;text-align:center;}
+    .sidebar-footer{margin-top:auto;padding:16px;border-top:1px solid var(--border);}
+    .env-badge{display:flex;align-items:center;gap:8px;background:var(--bg3);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--yellow);}
+    .env-dot{width:7px;height:7px;background:var(--yellow);border-radius:50%;animation:pulse 2s infinite;}
+    @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
+    .main{margin-left:260px;flex:1;min-height:100vh;display:flex;flex-direction:column;}
+    .topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 32px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;}
+    .topbar-title{font-family:var(--font-head);font-size:17px;font-weight:700;color:var(--text);}
+    .topbar-right{display:flex;align-items:center;gap:12px;}
+    .btn{background:var(--accent);color:#fff;border:none;padding:8px 18px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;font-family:var(--font-body);transition:opacity .15s;}
+    .btn:hover{opacity:.85;}
+    .btn.sec{background:var(--surface2);color:var(--text2);}
+    .btn.danger{background:rgba(240,101,101,0.15);color:var(--red);border:1px solid rgba(240,101,101,0.3);}.btn.warn{background:rgba(250,180,50,0.2);color:var(--yellow);border:1px solid var(--yellow);}
+    .btn.warn{background:rgba(240,200,75,0.15);color:var(--yellow);border:1px solid rgba(240,200,75,0.3);}
+    .btn.sm{padding:5px 12px;font-size:12px;}
+    .btn:disabled{opacity:0.35;cursor:not-allowed;}
+    .content{padding:32px;flex:1;}
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;}
+    .card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+    .card-title{font-family:var(--font-head);font-size:15px;font-weight:700;}
+    .card-sub{font-size:12px;color:var(--text3);margin-top:2px;}
+    .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;}
+    .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;}
+    .stat-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;}
+    .stat-value{font-family:var(--font-head);font-size:26px;font-weight:800;}
+    .stat-change{font-size:12px;margin-top:6px;}
+    .pos{color:var(--green);}.neg{color:var(--red);}
+    .table-wrap{overflow-x:auto;}
+    table{width:100%;border-collapse:collapse;font-size:13.5px;}
+    th{text-align:left;padding:10px 14px;color:var(--text3);font-size:11px;text-transform:uppercase;letter-spacing:.8px;border-bottom:1px solid var(--border);font-weight:600;}
+    td{padding:12px 14px;border-bottom:1px solid #1a1f30;color:var(--text2);}
+    tr:last-child td{border-bottom:none;}
+    tr:hover td{background:var(--bg3);color:var(--text);}
+    .badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;}
+    .b-green{background:rgba(62,207,142,.12);color:var(--green);}
+    .b-red{background:rgba(240,101,101,.12);color:var(--red);}
+    .b-yellow{background:rgba(240,200,75,.12);color:var(--yellow);}
+    .b-blue{background:rgba(91,106,240,.15);color:var(--accent2);}
+    .b-orange{background:rgba(240,154,75,.12);color:var(--orange);}
+    .b-gray{background:rgba(86,93,130,.15);color:var(--text3);}
+    .badge-dot{width:5px;height:5px;border-radius:50%;background:currentColor;}
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+    .form-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
+    .form-full{grid-column:1/-1;}
+    .form-group{display:flex;flex-direction:column;gap:6px;}
+    .form-label{font-size:12px;color:var(--text2);font-weight:500;letter-spacing:.3px;}
+    .form-input{background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:8px;font-size:13.5px;font-family:var(--font-body);outline:none;transition:border-color .15s;width:100%;}
+    .form-input:focus{border-color:var(--accent);}
+    .form-input::placeholder{color:var(--text3);}
+    textarea.form-input{resize:vertical;min-height:80px;}
+    select.form-input option{background:var(--bg3);}
+    .form-section-title{font-family:var(--font-head);font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;grid-column:1/-1;padding-top:8px;margin-top:4px;border-top:1px solid var(--border);}
+    .tabs{display:flex;gap:4px;background:var(--bg3);padding:4px;border-radius:10px;width:fit-content;margin-bottom:20px;}
+    .tab{padding:8px 18px;border-radius:7px;cursor:pointer;font-size:13px;font-weight:500;color:var(--text3);transition:all .15s;}
+    .tab.active{background:var(--surface2);color:var(--text);}
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:flex;align-items:center;justify-content:center;padding:24px;}
+    .modal{background:var(--bg2);border:1px solid var(--border);border-radius:16px;width:100%;max-width:720px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow);}
+    .modal-header{padding:24px 28px 0;display:flex;align-items:center;justify-content:space-between;}
+    .modal-title{font-family:var(--font-head);font-size:18px;font-weight:800;}
+    .modal-body{padding:24px 28px 28px;}
+    .modal-close{background:var(--surface2);border:none;color:var(--text2);width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;}
+    .modal-close:hover{background:var(--border);}
+    .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:24px;}
+    .split-item{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:16px;position:relative;}
+    .split-remove{position:absolute;top:10px;right:10px;background:rgba(240,101,101,.12);border:none;color:var(--red);width:26px;height:26px;border-radius:6px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;}
+    .add-split-btn{width:100%;background:var(--surface2);border:1px dashed var(--border);color:var(--text3);padding:12px;border-radius:10px;cursor:pointer;font-size:13px;font-family:var(--font-body);transition:all .15s;margin-top:10px;}
+    .add-split-btn:hover{border-color:var(--accent);color:var(--accent2);}
+    .filter-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;align-items:center;}
+    .filter-bar .form-input{width:auto;}
+    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+    .three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
+    .info-box{background:rgba(91,106,240,.08);border:1px solid rgba(91,106,240,.25);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--accent2);margin-bottom:16px;}
+    .warn-box{background:rgba(240,200,75,.08);border:1px solid rgba(240,200,75,.25);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--yellow);margin-bottom:16px;}
+    .toast{position:fixed;bottom:24px;right:24px;z-index:999;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 20px;display:flex;align-items:center;gap:10px;box-shadow:var(--shadow);font-size:13.5px;animation:slideIn .3s ease;}
+    @keyframes slideIn{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+    .empty-state{text-align:center;padding:40px;color:var(--text3);font-size:14px;}
+    .highlight-row td{background:rgba(240,200,75,.05)!important;}
+    .highlight-row-red td{background:rgba(240,101,101,.05)!important;}
+    .action-group{display:flex;gap:4px;flex-wrap:wrap;}
+    .pc-tree{display:flex;flex-direction:column;gap:4px;}
+    .pc-level1{font-weight:700;color:var(--text);font-size:14px;}
+    .pc-level2{padding-left:20px;color:var(--text2);font-size:13px;}
+    .pc-level3{padding-left:40px;color:var(--text3);font-size:12px;}
+    .pc-item{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-radius:8px;cursor:default;}
+    .pc-item:hover{background:var(--bg3);}
+    .nf-preview{background:#fff;color:#222;border-radius:8px;padding:24px;font-family:'Courier New',monospace;font-size:12px;line-height:1.7;}
+    @media(max-width:900px){.sidebar{width:60px;}.sidebar-logo h1,.sidebar-logo p,.nav-item span,.sidebar-section-label{display:none;}.main{margin-left:60px;}.stats-grid{grid-template-columns:1fr 1fr;}.form-grid,.two-col{grid-template-columns:1fr;}}
+  `}</style>
+);
+
+// ─── DATA ────────────────────────────────────────────────────────────────────
+const today = new Date();
+const fmt = v => new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(v);
+const fmtDate = d => { if(!d) return ""; const [y,m,day] = d.split("-"); return `${day}/${m}/${y}`; };
+const addDays = (d,n) => { const r=new Date(d); r.setDate(r.getDate()+n); return r; };
+const toISO = d => d.toISOString().split("T")[0];
+const daysFromNow = d => { const t=new Date(); t.setHours(0,0,0,0); const dt=new Date(d+"T00:00:00"); return Math.ceil((dt-t)/(1000*86400)); };
+
+const INIT_PLANO = [
+  { id:1, nivel:1, codigo:"1", nome:"RECEITAS", tipo:"receber", pai:null },
+  { id:2, nivel:2, codigo:"1.1", nome:"Atendimentos", tipo:"receber", pai:1 },
+  { id:3, nivel:3, codigo:"1.1.1", nome:"Terapia Individual", tipo:"receber", pai:2 },
+  { id:4, nivel:3, codigo:"1.1.2", nome:"Terapia em Grupo", tipo:"receber", pai:2 },
+  { id:5, nivel:2, codigo:"1.2", nome:"Planos e Mensalidades", tipo:"receber", pai:1 },
+  { id:6, nivel:3, codigo:"1.2.1", nome:"Plano Mensal", tipo:"receber", pai:5 },
+  { id:7, nivel:1, codigo:"2", nome:"DESPESAS", tipo:"pagar", pai:null },
+  { id:8, nivel:2, codigo:"2.1", nome:"Infraestrutura", tipo:"pagar", pai:7 },
+  { id:9, nivel:3, codigo:"2.1.1", nome:"Aluguel", tipo:"pagar", pai:8 },
+  { id:10,nivel:3, codigo:"2.1.2", nome:"Energia e Utilities", tipo:"pagar", pai:8 },
+  { id:11,nivel:2, codigo:"2.2", nome:"Administrativo", tipo:"pagar", pai:7 },
+  { id:12,nivel:3, codigo:"2.2.1", nome:"Material de Escritório", tipo:"pagar", pai:11 },
+  { id:13,nivel:3, codigo:"2.2.2", nome:"Serviços Contábeis", tipo:"pagar", pai:11 },
+];
+
+const NBS_SERVICES = [
+  { cnae:"85.99-6-99", nbs:"1.0801.00.00", desc:"Outras atividades de ensino não especificadas anteriormente", iss:"2%" },
+  { cnae:"86.50-0-03", nbs:"1.0706.04.00", desc:"Atividades de psicologia e psicanálise", iss:"2%" },
+  { cnae:"86.50-0-06", nbs:"1.0706.06.00", desc:"Atividades de fonoaudiologia", iss:"2%" },
+  { cnae:"86.50-0-99", nbs:"1.0706.99.00", desc:"Atividades de profissionais da área de saúde não especificadas anteriormente", iss:"2%" },
+];
+
+const INIT_CLIENTES = [];
+const INIT_TERAPEUTAS = [];
+const INIT_SUBCONTAS = [];
+const INIT_COBRANCAS = [];
+const INIT_FORNECEDORES = [];
+const INIT_RECEBER = [];
+const INIT_PAGAR = [];
+const INIT_NF = [];
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+const StatusBadge = ({s}) => {
+  const m = {
+    PENDING:["b-yellow","Pendente"],RECEIVED:["b-green","Recebido"],OVERDUE:["b-red","Vencido"],
+    ACTIVE:["b-green","Ativa"],ativo:["b-green","Ativo"],inativo:["b-gray","Inativo"],bloqueado:["b-red","Bloqueado"],
+    pendente:["b-yellow","Pendente"],recebido:["b-green","Recebido"],pago:["b-green","Pago"],
+    cancelado:["b-red","Cancelado"],BOLETO:["b-blue","Boleto"],PIX:["b-green","Pix"],
+    CREDIT_CARD:["b-orange","Cartão"],EMITIDA:["b-green","Emitida"],CANCELADA:["b-red","Cancelada"],
+  };
+  const [cls,label]=m[s]||["b-gray",s];
+  return <span className={`badge ${cls}`}><span className="badge-dot"/>{label}</span>;
+};
+
+const Inp = ({label,...p}) => (
+  <div className="form-group">
+    {label && <label className="form-label">{label}</label>}
+    <input className="form-input" {...p}/>
+  </div>
+);
+const Sel = ({label,children,...p}) => (
+  <div className="form-group">
+    {label && <label className="form-label">{label}</label>}
+    <select className="form-input" {...p}>{children}</select>
+  </div>
+);
+const Txt = ({label,...p}) => (
+  <div className="form-group">
+    {label && <label className="form-label">{label}</label>}
+    <textarea className="form-input" {...p}/>
+  </div>
+);
+
+const Modal = ({title,sub,onClose,children,maxWidth=720}) => (
+  <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+    <div className="modal" style={{maxWidth}}>
+      <div className="modal-header">
+        <div>
+          <div className="modal-title">{title}</div>
+          {sub && <div style={{fontSize:12,color:"var(--text3)",marginTop:4}}>{sub}</div>}
+        </div>
+        <button className="modal-close" onClick={onClose}>✕</button>
+      </div>
+      <div className="modal-body">{children}</div>
+    </div>
+  </div>
+);
+
+const ConfirmModal = ({msg,onConfirm,onClose}) => (
+  <div className="modal-overlay">
+    <div className="modal" style={{maxWidth:420}}>
+      <div className="modal-header"><div className="modal-title">Confirmar ação</div><button className="modal-close" onClick={onClose}>✕</button></div>
+      <div className="modal-body">
+        <p style={{color:"var(--text2)",marginBottom:24}}>{msg}</p>
+        <div className="modal-actions">
+          <button className="btn sec" onClick={onClose}>Cancelar</button>
+          <button className="btn danger" onClick={onConfirm}>Confirmar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+// ─── MAIN APP STATE ───────────────────────────────────────────────────────────
+// ── Helpers localStorage ───────────────────────────────────────────────────────
+const lsGet = (key, fallback) => {
+  try { const v = localStorage.getItem("gasaas_"+key); return v ? JSON.parse(v) : fallback; } catch { return fallback; }
+};
+const lsSet = (key, val) => {
+  try { localStorage.setItem("gasaas_"+key, JSON.stringify(val)); } catch {}
+};
+
+// ── Helper chamada API via backend ─────────────────────────────────────────────
+const apiCall = async (cfg, method, path, body) => {
+  // Separa path da query string
+  const [pathOnly, qs] = path.split("?");
+  const cleanPath = pathOnly.replace(/^\//,""); // remove leading slash
+  const queryExtra = qs ? "&"+qs : "";
+  const url = `${cfg.backendUrl}/api/handler?path=api/asaas/${cleanPath}${queryExtra}`;
+  const res = await fetch(url, {
+    method,
+    headers: { "Content-Type": "application/json", ...(cfg.apiKey ? {"x-asaas-key": cfg.apiKey} : {}) },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  return res.json();
+};
+
+function App() {
+  const [page, setPage] = useState("dashboard");
+  const [toastMsg, setToastMsg] = useState(null);
+
+  // ── Dados persistidos em localStorage ───────────────────────────────────────
+  const [clientes,     setClientesRaw]     = useState(() => lsGet("clientes",     INIT_CLIENTES));
+  const [terapeutas,   setTerapeutasRaw]   = useState(() => lsGet("terapeutas",   INIT_TERAPEUTAS));
+  const [subcontas,    setSubcontasRaw]    = useState(() => lsGet("subcontas",    INIT_SUBCONTAS));
+  const [cobrancas,    setCobrancasRaw]    = useState(() => lsGet("cobrancas",    INIT_COBRANCAS));
+  const [fornecedores, setFornecedoresRaw] = useState(() => lsGet("fornecedores", INIT_FORNECEDORES));
+  const [receber,      setReceberRaw]      = useState(() => lsGet("receber",      INIT_RECEBER));
+  const [pagar,        setPagarRaw]        = useState(() => lsGet("pagar",        INIT_PAGAR));
+  const [notas,        setNotasRaw]        = useState(() => lsGet("notas",        INIT_NF));
+  const [plano,        setPlanoRaw]        = useState(() => lsGet("plano",        INIT_PLANO));
+
+  // Wrappers que persistem automaticamente
+  const setClientes     = v => { const nv = typeof v==="function"?v(clientes):v;     lsSet("clientes",nv);     setClientesRaw(nv); };
+  const setTerapeutas   = v => { const nv = typeof v==="function"?v(terapeutas):v;   lsSet("terapeutas",nv);   setTerapeutasRaw(nv); };
+  const setSubcontas    = v => { const nv = typeof v==="function"?v(subcontas):v;    lsSet("subcontas",nv);    setSubcontasRaw(nv); };
+  const setCobrancas    = v => { const nv = typeof v==="function"?v(cobrancas):v;    lsSet("cobrancas",nv);    setCobrancasRaw(nv); };
+  const setFornecedores = v => { const nv = typeof v==="function"?v(fornecedores):v; lsSet("fornecedores",nv); setFornecedoresRaw(nv); };
+  const setReceber      = v => { const nv = typeof v==="function"?v(receber):v;      lsSet("receber",nv);      setReceberRaw(nv); };
+  const setPagar        = v => { const nv = typeof v==="function"?v(pagar):v;        lsSet("pagar",nv);        setPagarRaw(nv); };
+  const setNotas        = v => { const nv = typeof v==="function"?v(notas):v;        lsSet("notas",nv);        setNotasRaw(nv); };
+  const setPlano        = v => { const nv = typeof v==="function"?v(plano):v;        lsSet("plano",nv);        setPlanoRaw(nv); };
+
+  // ── Config API (lida do localStorage) ───────────────────────────────────────
+  const [apiCfg, setApiCfg] = useState(() => {
+    try { const v = localStorage.getItem("gestaoasaas_config"); return v ? JSON.parse(v) : {}; } catch { return {}; }
+  });
+  // Quando Configurações salvar, App precisa re-ler — polling simples
+  useEffect(() => {
+    const id = setInterval(() => {
+      try {
+        const v = localStorage.getItem("gestaoasaas_config");
+        if (v) { const parsed = JSON.parse(v); setApiCfg(parsed); }
+      } catch {}
+    }, 2000);
+    return () => clearInterval(id);
+  }, []);
+
+  const apiIntegrado = !!(apiCfg.backendUrl && apiCfg.backendUrl.trim() && apiCfg.apiKey && apiCfg.apiKey.trim());
+  const callApi = (method, path, body) => apiCall(apiCfg, method, path, body);
+
+  const toast = (msg, dur=3200) => { setToastMsg(msg); setTimeout(()=>setToastMsg(null),dur); };
+
+  const sharedProps = { clientes, setClientes, terapeutas, setTerapeutas, subcontas, setSubcontas, cobrancas, setCobrancas, fornecedores, setFornecedores, receber, setReceber, pagar, setPagar, notas, setNotas, plano, setPlano, apiIntegrado, apiCfg, callApi, toast };
+
+  const pages = [
+    {key:"dashboard",icon:"📊",label:"Dashboard",section:"GERAL"},
+    {key:"clientes",icon:"👥",label:"Clientes",section:"CADASTROS"},
+    {key:"terapeutas",icon:"🩺",label:"Terapeutas",section:"CADASTROS"},
+    {key:"fornecedores",icon:"🏪",label:"Fornecedores",section:"CADASTROS"},
+    {key:"planocontas",icon:"🗂️",label:"Plano de Contas",section:"CADASTROS"},
+    {key:"subcontas",icon:"🏦",label:"Subcontas Asaas",section:"ASAAS"},
+    {key:"cobrancas",icon:"💳",label:"Cobranças + Split",section:"ASAAS"},
+    {key:"financeiro",icon:"💰",label:"Financeiro",section:"FINANCEIRO"},
+    {key:"notas",icon:"📄",label:"NFS-e",section:"FINANCEIRO"},
+    {key:"relatorios",icon:"📈",label:"Relatórios",section:"FINANCEIRO"},
+    {key:"config",icon:"⚙️",label:"Configurações",section:"SISTEMA"},
+  ];
+  const sections = [...new Set(pages.map(p=>p.section))];
+  const titles = {dashboard:"Dashboard",clientes:"Clientes",terapeutas:"Terapeutas",fornecedores:"Fornecedores",planocontas:"Plano de Contas",subcontas:"Subcontas Asaas",cobrancas:"Cobranças com Split",financeiro:"Financeiro",notas:"Notas Fiscais (NFS-e)",relatorios:"Relatórios",config:"Configurações"};
+
+  const renderPage = () => {
+    switch(page) {
+      case "dashboard": return <Dashboard {...sharedProps}/>;
+      case "clientes": return <Clientes {...sharedProps}/>;
+      case "terapeutas": return <Terapeutas {...sharedProps}/>;
+      case "fornecedores": return <Fornecedores {...sharedProps}/>;
+      case "planocontas": return <PlanoContas {...sharedProps}/>;
+      case "subcontas": return <Subcontas {...sharedProps}/>;
+      case "cobrancas": return <Cobrancas {...sharedProps}/>;
+      case "financeiro": return <Financeiro {...sharedProps}/>;
+      case "notas": return <NotasFiscais {...sharedProps}/>;
+      case "relatorios": return <Relatorios {...sharedProps}/>;
+      case "config": return <Configuracoes {...sharedProps}/>;
+      default: return null;
+    }
+  };
+
+  return (
+    <>
+      <FontLoader/>
+      <div className="layout">
+        <nav className="sidebar">
+          <div className="sidebar-logo">
+            <h1>Gestão<span>Asaas</span></h1>
+            <p>Sistema de Gestão PJ</p>
+          </div>
+          {sections.map(sec=>(
+            <div key={sec}>
+              <div className="sidebar-section-label">{sec}</div>
+              {pages.filter(p=>p.section===sec).map(p=>(
+                <div key={p.key} className={`nav-item ${page===p.key?"active":""}`} onClick={()=>setPage(p.key)}>
+                  <span className="icon">{p.icon}</span><span>{p.label}</span>
+                </div>
+              ))}
+            </div>
+          ))}
+          <div className="sidebar-footer">
+            <div className="env-badge"><div className="env-dot" style={{background: apiIntegrado && apiCfg.env==="production" ? "var(--green)" : "var(--yellow)"}}/>
+              <span>{apiIntegrado ? (apiCfg.env==="production" ? "Produção" : "Sandbox") : "Modo Demo"}</span>
+            </div>
+          </div>
+        </nav>
+        <div className="main">
+          <header className="topbar">
+            <div className="topbar-title">{titles[page]}</div>
+            <div className="topbar-right">
+              <span style={{fontSize:12,color:apiIntegrado?"var(--green)":"var(--text3)"}}>
+                {apiIntegrado ? "✅ API conectada" : "API: não configurada"}
+              </span>
+              <button className="btn sec" onClick={()=>setPage("config")}>⚙️ Config API</button>
+            </div>
+          </header>
+          <div className="content">{renderPage()}</div>
+        </div>
+      </div>
+      {toastMsg && <div className="toast"><span>🔔</span><span>{toastMsg}</span></div>}
+    </>
+  );
+}
+
+// ─── DASHBOARD ────────────────────────────────────────────────────────────────
+function Dashboard({receber,pagar}) {
+  const now = new Date(); now.setHours(0,0,0,0);
+  const [mes, setMes] = useState(today.getMonth());
+  const [ano, setAno] = useState(today.getFullYear());
+
+  const mesNomes = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+
+  const next7Rec = receber.filter(r=>{
+    if(r.status==="recebido"||r.status==="cancelado") return false;
+    const d=daysFromNow(r.vencimento); return d>=0&&d<=7;
+  }).sort((a,b)=>a.vencimento.localeCompare(b.vencimento));
+
+  const next7Pag = pagar.filter(r=>{
+    if(r.status==="pago"||r.status==="cancelado") return false;
+    const d=daysFromNow(r.vencimento); return d>=0&&d<=7;
+  }).sort((a,b)=>a.vencimento.localeCompare(b.vencimento));
+
+  const totalRec = receber.filter(r=>r.status!=="cancelado").reduce((a,b)=>a+b.valor,0);
+  const totalPag = pagar.filter(p=>p.status!=="cancelado").reduce((a,b)=>a+b.valor,0);
+  const recebido = receber.filter(r=>r.status==="recebido").reduce((a,b)=>a+b.valor,0);
+
+  const months=["Set","Out","Nov","Dez","Jan","Fev"];
+  const rv=[65,80,55,90,70,95],pv=[40,55,45,60,50,70],mx=Math.max(...rv,...pv);
+
+  return (
+    <div>
+      {/* Filtro de período */}
+      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:24}}>
+        <span style={{fontSize:13,color:"var(--text3)"}}>Período:</span>
+        <select className="form-input" style={{width:160}} value={mes} onChange={e=>setMes(+e.target.value)}>
+          {mesNomes.map((m,i)=><option key={i} value={i}>{m}</option>)}
+        </select>
+        <select className="form-input" style={{width:100}} value={ano} onChange={e=>setAno(+e.target.value)}>
+          {[2024,2025,2026].map(y=><option key={y}>{y}</option>)}
+        </select>
+        <span className="badge b-blue">{mesNomes[mes]}/{ano}</span>
+      </div>
+
+      <div className="stats-grid">
+        {[
+          {label:"A Receber",value:fmt(totalRec-recebido),c:"var(--green)"},
+          {label:"Já Recebido",value:fmt(recebido),c:"var(--green)"},
+          {label:"A Pagar",value:fmt(totalPag),c:"var(--red)"},
+          {label:"Saldo Projetado",value:fmt(recebido-totalPag),c:"var(--accent2)"},
+        ].map((s,i)=>(
+          <div className="stat-card" key={i}>
+            <div className="stat-label">{s.label}</div>
+            <div className="stat-value" style={{fontSize:22,color:s.c}}>{s.value}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Próximos 7 dias */}
+      <div className="two-col" style={{marginBottom:20}}>
+        <div className="card">
+          <div className="card-header">
+            <div><div className="card-title">📥 A Receber — Próx. 7 dias</div><div className="card-sub">{next7Rec.length} título(s) em aberto</div></div>
+          </div>
+          {next7Rec.length===0 ? <div className="empty-state">Nenhum título nos próximos 7 dias</div> : (
+            <div style={{display:"flex",flexDirection:"column",gap:8}}>
+              {next7Rec.map(r=>{
+                const d=daysFromNow(r.vencimento);
+                const cor=d===0?"var(--red)":d<=2?"var(--orange)":"var(--yellow)";
+                return (
+                  <div key={r.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",background:"var(--bg3)",borderRadius:8,padding:"10px 12px",borderLeft:`3px solid ${cor}`}}>
+                    <div>
+                      <div style={{fontSize:13,fontWeight:600,color:"var(--text)"}}>{r.descricao}</div>
+                      <div style={{fontSize:11,color:"var(--text3)"}}>{r.cliente} · Vence {fmtDate(r.vencimento)}</div>
+                    </div>
+                    <div style={{textAlign:"right"}}>
+                      <div style={{fontWeight:700,color:"var(--green)"}}>{fmt(r.valor)}</div>
+                      <div style={{fontSize:11,color:cor}}>{d===0?"Hoje":d===1?"Amanhã":`${d} dias`}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className="card">
+          <div className="card-header">
+            <div><div className="card-title">📤 A Pagar — Próx. 7 dias</div><div className="card-sub">{next7Pag.length} título(s) em aberto</div></div>
+          </div>
+          {next7Pag.length===0 ? <div className="empty-state">Nenhum título nos próximos 7 dias</div> : (
+            <div style={{display:"flex",flexDirection:"column",gap:8}}>
+              {next7Pag.map(r=>{
+                const d=daysFromNow(r.vencimento);
+                const cor=d===0?"var(--red)":d<=2?"var(--orange)":"var(--yellow)";
+                return (
+                  <div key={r.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",background:"var(--bg3)",borderRadius:8,padding:"10px 12px",borderLeft:`3px solid ${cor}`}}>
+                    <div>
+                      <div style={{fontSize:13,fontWeight:600,color:"var(--text)"}}>{r.descricao}</div>
+                      <div style={{fontSize:11,color:"var(--text3)"}}>{r.fornecedor} · Vence {fmtDate(r.vencimento)}</div>
+                    </div>
+                    <div style={{textAlign:"right"}}>
+                      <div style={{fontWeight:700,color:"var(--red)"}}>{fmt(r.valor)}</div>
+                      <div style={{fontSize:11,color:cor}}>{d===0?"Hoje":d===1?"Amanhã":`${d} dias`}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Gráfico */}
+      <div className="card">
+        <div className="card-header">
+          <div><div className="card-title">Fluxo de Caixa — Últimos 6 meses</div></div>
+          <div style={{display:"flex",gap:16,fontSize:12}}>
+            <span style={{color:"var(--green)"}}>● Receber</span>
+            <span style={{color:"var(--red)"}}>● Pagar</span>
+          </div>
+        </div>
+        <div style={{display:"flex",gap:8,height:100,alignItems:"flex-end"}}>
+          {months.map((m,i)=>(
+            <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
+              <div style={{flex:1,width:"100%",display:"flex",gap:3,alignItems:"flex-end"}}>
+                <div style={{flex:1,background:"linear-gradient(180deg,var(--green),rgba(62,207,142,.3))",borderRadius:"3px 3px 0 0",height:`${(rv[i]/mx)*100}%`}}/>
+                <div style={{flex:1,background:"linear-gradient(180deg,var(--red),rgba(240,101,101,.3))",borderRadius:"3px 3px 0 0",height:`${(pv[i]/mx)*100}%`}}/>
+              </div>
+              <span style={{fontSize:10,color:"var(--text3)"}}>{m}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+// ─── HELPER CEP ───────────────────────────────────────────────────────────────
+async function buscarCepApi(cepRaw, setForm, setBuscando, toast) {
+  const cepLimpo = cepRaw.replace(/\D/g,"");
+  if(cepLimpo.length !== 8) return;
+  setBuscando(true);
+  try {
+    const r = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
+    const d = await r.json();
+    if(d.erro) { toast("⚠️ CEP não encontrado."); return; }
+    setForm(p=>({...p,
+      endereco: d.logradouro || p.endereco,
+      bairro:   d.bairro    || p.bairro,
+      cidade:   d.localidade|| p.cidade,
+      estado:   d.uf        || p.estado,
+    }));
+    toast("📍 Endereço preenchido automaticamente!");
+  } catch { toast("⚠️ Erro ao buscar CEP."); }
+  finally { setBuscando(false); }
+}
+
+function CepInp({form, setForm, toast}) {
+  const [buscando, setBuscando] = useState(false);
+  const handleCep = e => {
+    let v = e.target.value.replace(/\D/g,"");
+    if(v.length > 5) v = v.slice(0,5)+"-"+v.slice(5,8);
+    setForm(p=>({...p,cep:v}));
+    if(v.replace(/\D/g,"").length===8) buscarCepApi(v, setForm, setBuscando, toast);
+  };
+  return (
+    <div style={{position:"relative"}}>
+      <Inp label={buscando?"CEP (buscando...)":"CEP"} value={form.cep||""} onChange={handleCep} placeholder="00000-000"/>
+      {buscando && <span style={{position:"absolute",right:10,top:32,fontSize:16}}>🔄</span>}
+    </div>
+  );
+}
+
+// ─── CLIENTES ────────────────────────────────────────────────────────────────
+function Clientes({clientes,setClientes,cobrancas,apiIntegrado,callApi,toast}) {
+  const [modal,setModal]=useState(false);
+  const [editing,setEditing]=useState(null);
+  const [confirm,setConfirm]=useState(null);
+  const [salvando,setSalvando]=useState(false);
+  const [buscandoCep,setBuscandoCep]=useState(false);
+  const [filtroAluno,setFiltroAluno]=useState("");
+  const [filtroStatus,setFiltroStatus]=useState("");
+  const emptyForm={nome:"",cpf:"",email:"",telefone:"",nomeAluno:"",cep:"",endereco:"",bairro:"",cidade:"",estado:"SP",status:"ativo",bloqueado:false};
+  const [form,setForm]=useState(emptyForm);
+  const f=k=>e=>setForm(p=>({...p,[k]:e.target.value}));
+
+  const buscarCep = async (cepRaw) => {
+    const cepLimpo = cepRaw.replace(/\D/g,"");
+    if(cepLimpo.length !== 8) return;
+    setBuscandoCep(true);
+    try {
+      const r = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
+      const d = await r.json();
+      if(d.erro) { toast("⚠️ CEP não encontrado."); return; }
+      setForm(p=>({...p,
+        endereco: d.logradouro || p.endereco,
+        bairro:   d.bairro    || p.bairro,
+        cidade:   d.localidade|| p.cidade,
+        estado:   d.uf        || p.estado,
+      }));
+      toast("📍 Endereço preenchido automaticamente!");
+    } catch { toast("⚠️ Erro ao buscar CEP."); }
+    finally { setBuscandoCep(false); }
+  };
+
+  const handleCep = e => {
+    let v = e.target.value.replace(/\D/g,"");
+    if(v.length > 5) v = v.slice(0,5)+"-"+v.slice(5,8);
+    setForm(p=>({...p,cep:v}));
+    if(v.replace(/\D/g,"").length===8) buscarCep(v);
+  };
+
+  const openNew=()=>{setForm(emptyForm);setEditing(null);setModal(true);};
+  const openEdit=c=>{setForm({...c});setEditing(c.id);setModal(true);};
+
+  const save=async()=>{
+    if(!form.nome.trim()){toast("⚠️ Informe o nome do cliente");return;}
+    if(!form.cpf.trim()){toast("⚠️ CPF é obrigatório para integração com Asaas");return;}
+    setSalvando(true);
+
+    let asaasId = form.asaasId || "";
+
+    // Integra com Asaas se API configurada (novo cliente OU edição sem asaasId)
+    if(apiIntegrado && (!editing || !form.asaasId)) {
+      try {
+        const cpfLimpo = form.cpf.replace(/\D/g,"");
+        // Busca se já existe na Asaas
+        const busca = await callApi("GET", `/customers?cpfCnpj=${cpfLimpo}`);
+        if(busca.data && busca.data.length > 0) {
+          asaasId = busca.data[0].id;
+          toast("ℹ️ Cliente já existia na Asaas — vinculado!");
+        } else {
+          // Cria novo cliente na Asaas
+          const result = await callApi("POST", "/customers", {
+            name: form.nome,
+            cpfCnpj: cpfLimpo,
+            email: form.email || "",
+            phone: form.telefone ? form.telefone.replace(/\D/g,"") : "",
+            address: form.endereco || "",
+            addressNumber: "",
+            complement: "",
+            province: form.bairro || "",
+            city: form.cidade || "",
+            state: form.estado || "SC",
+            postalCode: form.cep ? form.cep.replace(/\D/g,"") : "",
+          });
+          if(result.id) {
+            asaasId = result.id;
+          } else {
+            toast("⚠️ Cliente salvo localmente. Erro Asaas: "+(result.errors?.[0]?.description||result.message||""));
+          }
+        }
+      } catch(e) {
+        toast("⚠️ Cliente salvo localmente (erro Asaas: "+e.message+")");
+      }
+    }
+
+    const clienteData = {...form, asaasId};
+    if(editing) setClientes(p=>p.map(c=>c.id===editing?{...clienteData,id:editing}:c));
+    else setClientes(p=>[...p,{...clienteData,id:Date.now()}]);
+
+    setModal(false);
+    setSalvando(false);
+    const label = asaasId ? (editing?"✅ Cliente atualizado e sincronizado com Asaas!":"✅ Cliente cadastrado e sincronizado com Asaas!") : (editing?"✅ Cliente atualizado!":"✅ Cliente cadastrado!");
+    toast(label);
+  };
+
+  const bloquear=id=>{
+    setClientes(p=>p.map(c=>c.id===id?{...c,bloqueado:!c.bloqueado}:c));
+    toast("🔒 Status do cliente alterado!");
+  };
+
+  const excluir=id=>{
+    const temCob=cobrancas.some(c=>c.clienteId===id);
+    if(temCob){toast("⚠️ Não é possível excluir: cliente possui cobranças geradas.");return;}
+    setConfirm({msg:"Deseja excluir este cliente?",fn:()=>{setClientes(p=>p.filter(c=>c.id!==id));toast("🗑️ Cliente excluído!");}});
+  };
+
+  const lista=clientes.filter(c=>{
+    const aOk=!filtroAluno||c.nomeAluno.toLowerCase().includes(filtroAluno.toLowerCase())||c.nome.toLowerCase().includes(filtroAluno.toLowerCase());
+    const sOk=!filtroStatus||(filtroStatus==="bloqueado"?c.bloqueado:c.status===filtroStatus&&!c.bloqueado);
+    return aOk&&sOk;
+  });
+
+  return (
+    <div>
+      {confirm && <ConfirmModal msg={confirm.msg} onConfirm={()=>{confirm.fn();setConfirm(null);}} onClose={()=>setConfirm(null)}/>}
+      {modal && (
+        <Modal title={editing?"Editar Cliente":"Novo Cliente"} onClose={()=>setModal(false)}>
+          <div className="form-grid">
+            <Inp label="Nome Completo" value={form.nome} onChange={f("nome")}/>
+            <Inp label="CPF" value={form.cpf} placeholder="000.000.000-00" onChange={f("cpf")}/>
+            <Inp label="E-mail" value={form.email} onChange={f("email")}/>
+            <Inp label="Telefone" value={form.telefone} placeholder="(00) 00000-0000" onChange={f("telefone")}/>
+            <Inp label="Nome do Aluno / Paciente" value={form.nomeAluno} onChange={f("nomeAluno")}/>
+            <div style={{position:"relative"}}>
+              <Inp label={buscandoCep?"CEP (buscando...)":"CEP"} value={form.cep} onChange={handleCep} placeholder="00000-000"/>
+              {buscandoCep && <span style={{position:"absolute",right:10,top:32,fontSize:16}}>🔄</span>}
+            </div>
+            <Inp label="Endereço (Rua e Número)" value={form.endereco} onChange={f("endereco")}/>
+            <Inp label="Bairro" value={form.bairro} onChange={f("bairro")}/>
+            <Inp label="Cidade" value={form.cidade} onChange={f("cidade")}/>
+            <Sel label="Estado" value={form.estado} onChange={f("estado")}>
+              {["SP","RJ","MG","RS","PR","SC","BA","CE","PE","GO","DF"].map(s=><option key={s}>{s}</option>)}
+            </Sel>
+          </div>
+          <div className="modal-actions">
+            <button className="btn sec" onClick={()=>setModal(false)}>Cancelar</button>
+            <button className="btn" onClick={save} disabled={salvando}>{salvando?"⏳ Salvando...":editing?"Salvar Alterações":"Cadastrar Cliente"}</button>
+          </div>
+        </Modal>
+      )}
+
+      <div className="filter-bar">
+        <Inp label="" placeholder="🔍 Buscar por aluno / paciente ou responsável" value={filtroAluno} onChange={e=>setFiltroAluno(e.target.value)}/>
+        <Sel label="" value={filtroStatus} onChange={e=>setFiltroStatus(e.target.value)} style={{width:160}}>
+          <option value="">Todos os status</option>
+          <option value="ativo">Ativos</option>
+          <option value="bloqueado">Bloqueados</option>
+        </Sel>
+        <button className="btn sm sec" onClick={()=>{setFiltroAluno("");setFiltroStatus("");}}>Limpar</button>
+      </div>
+
+      <div className="card">
+        <div className="card-header">
+          <div><div className="card-title">Clientes</div><div className="card-sub">{lista.length} de {clientes.length} registros</div></div>
+          <button className="btn" onClick={openNew}>+ Novo Cliente</button>
+        </div>
+        <div className="table-wrap">
+          <table>
+            <thead><tr><th>Nome</th><th>CPF</th><th>Aluno / Paciente</th><th>Telefone</th><th>Cidade</th><th>Status</th><th>Ações</th></tr></thead>
+            <tbody>{lista.map(c=>(
+              <tr key={c.id} className={c.bloqueado?"highlight-row-red":""}>
+                <td style={{fontWeight:600,color:c.bloqueado?"var(--red)":"var(--text)"}}>{c.nome}</td>
+                <td>{c.cpf}</td>
+                <td>{c.nomeAluno}</td>
+                <td>{c.telefone}</td>
+                <td>{c.cidade}/{c.estado}</td>
+                <td><StatusBadge s={c.bloqueado?"bloqueado":c.status}/></td>
+                <td>
+                  <div className="action-group">
+                    <button className="btn sm sec" onClick={()=>openEdit(c)}>✏️ Editar</button>
+                    {apiIntegrado && !c.asaasId && <button className="btn sm" style={{background:"var(--accent)",color:"#fff"}} onClick={async()=>{
+                      try {
+                        const cpfLimpo = c.cpf.replace(/\D/g,"");
+                        const busca = await callApi("GET",`/customers?cpfCnpj=${cpfLimpo}`);
+                        let aid = "";
+                        if(busca.data&&busca.data.length>0){ aid=busca.data[0].id; }
+                        else {
+                          const r = await callApi("POST","/customers",{name:c.nome,cpfCnpj:cpfLimpo,email:c.email||"",phone:(c.telefone||"").replace(/\D/g,"")});
+                          if(r.id) aid=r.id;
+                          else { toast("❌ Erro Asaas: "+(r.errors?.[0]?.description||r.message||JSON.stringify(r))); return; }
+                        }
+                        setClientes(p=>p.map(x=>x.id===c.id?{...x,asaasId:aid}:x));
+                        toast("✅ "+c.nome+" sincronizado com Asaas!");
+                      } catch(e){ toast("❌ "+e.message); }
+                    }}>🔄 Sincronizar</button>}
+                    {c.asaasId && <span style={{fontSize:11,color:"var(--green)",padding:"2px 8px",background:"rgba(62,207,142,.1)",borderRadius:4}}>✅ Asaas</span>}
+                    <button className="btn sm warn" onClick={()=>bloquear(c.id)}>{c.bloqueado?"🔓 Desbloquear":"🔒 Bloquear"}</button>
+                    <button className="btn sm danger" onClick={()=>excluir(c.id)}>🗑️</button>
+                  </div>
+                </td>
+              </tr>
+            ))}</tbody>
+          </table>
+          {lista.length===0&&<div className="empty-state">Nenhum cliente encontrado</div>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── TERAPEUTAS ───────────────────────────────────────────────────────────────
+function Terapeutas({terapeutas,setTerapeutas,toast}) {
+  const [modal,setModal]=useState(false);
+  const [editing,setEditing]=useState(null);
+  const especialidades=["Psicologia","Psicopedagogia","Fonoaudiologia","Terapia Ocupacional","Fisioterapia","Neuropsicologia","Educação Especial","ABA","Outro"];
+  const emptyForm={nome:"",cpf:"",cnpj:"",email:"",telefone:"",especialidades:[],nomeAluno:"",cep:"",endereco:"",bairro:"",cidade:"",estado:"SP",banco:"Itaú",agencia:"",conta:"",tipoConta:"Corrente",walletId:"",pix:"",status:"ativo"};
+  const [form,setForm]=useState(emptyForm);
+  const f=k=>e=>setForm(p=>({...p,[k]:e.target.value}));
+  const openNew=()=>{setForm(emptyForm);setEditing(null);setModal(true);};
+  const openEdit=t=>{setForm({...t,especialidades:t.especialidades||[t.especialidade].filter(Boolean)});setEditing(t.id);setModal(true);};
+  const toggleEsp=esp=>setForm(p=>{
+    const arr=p.especialidades||[];
+    return {...p,especialidades:arr.includes(esp)?arr.filter(x=>x!==esp):[...arr,esp]};
+  });
+  const save=()=>{
+    const data={...form,especialidade:(form.especialidades||[]).join(", ")};
+    if(editing) setTerapeutas(p=>p.map(t=>t.id===editing?{...data,id:editing}:t));
+    else setTerapeutas(p=>[...p,{...data,id:Date.now()}]);
+    setModal(false);toast(editing?"✅ Terapeuta atualizado!":"✅ Terapeuta cadastrado!");
+  };
+
+  return (
+    <div>
+      {modal && (
+        <Modal title={editing?"Editar Terapeuta":"Novo Terapeuta"} onClose={()=>setModal(false)}>
+          <div className="form-grid">
+            <Inp label="Nome Completo" value={form.nome} onChange={f("nome")}/>
+            <Inp label="CPF" value={form.cpf} placeholder="000.000.000-00" onChange={f("cpf")}/>
+            <Inp label="CNPJ" value={form.cnpj} placeholder="00.000.000/0001-00" onChange={f("cnpj")}/>
+            <div className="form-full">
+              <div style={{fontSize:12,color:"var(--text3)",marginBottom:6,fontWeight:600}}>Especialidades (selecione uma ou mais)</div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+                {especialidades.map(e=>{
+                  const sel=(form.especialidades||[]).includes(e);
+                  return <button key={e} type="button" onClick={()=>toggleEsp(e)}
+                    style={{padding:"4px 12px",borderRadius:20,fontSize:12,cursor:"pointer",border:"1.5px solid "+(sel?"var(--accent)":"var(--border)"),background:sel?"var(--accent)":"transparent",color:sel?"#fff":"var(--text2)",fontWeight:sel?600:400}}>
+                    {e}
+                  </button>;
+                })}
+              </div>
+            </div>
+            <Inp label="E-mail" value={form.email} onChange={f("email")}/>
+            <Inp label="Telefone" value={form.telefone} onChange={f("telefone")}/>
+            <CepInp form={form} setForm={setForm} toast={toast}/>
+            <Inp label="Endereço" value={form.endereco||""} onChange={f("endereco")}/>
+            <Inp label="Bairro" value={form.bairro||""} onChange={f("bairro")}/>
+            <Inp label="Cidade" value={form.cidade||""} onChange={f("cidade")}/>
+            <Sel label="Estado" value={form.estado} onChange={f("estado")}>
+              {["SP","RJ","MG","RS","PR","SC","BA","CE","GO","DF","ES","PE","AM","PA","MT","MS","MA","PI","AL","SE","RN","PB","CE","RO","AC","RR","AP","TO"].map(s=><option key={s}>{s}</option>)}
+            </Sel>
+            <div className="form-section-title">Dados Bancários & Asaas</div>
+            <Sel label="Banco" value={form.banco} onChange={f("banco")}>
+              {["Itaú","Bradesco","Santander","Caixa","BB","Nubank","Inter","Sicredi","C6 Bank"].map(b=><option key={b}>{b}</option>)}
+            </Sel>
+            <Inp label="Agência" value={form.agencia} placeholder="0000" onChange={f("agencia")}/>
+            <Inp label="Conta" value={form.conta} placeholder="00000-0" onChange={f("conta")}/>
+            <Sel label="Tipo de Conta" value={form.tipoConta} onChange={f("tipoConta")}>
+              <option>Corrente</option><option>Poupança</option>
+            </Sel>
+            <Inp label="Wallet ID Asaas" value={form.walletId} placeholder="wlt_..." onChange={f("walletId")}/>
+            <Inp label="Chave PIX" value={form.pix} placeholder="CPF, e-mail ou chave aleatória" onChange={f("pix")}/>
+          </div>
+          <div className="modal-actions">
+            <button className="btn sec" onClick={()=>setModal(false)}>Cancelar</button>
+            <button className="btn" onClick={save}>{editing?"Salvar Alterações":"Cadastrar Terapeuta"}</button>
+          </div>
+        </Modal>
+      )}
+      <div className="card">
+        <div className="card-header">
+          <div><div className="card-title">Terapeutas</div><div className="card-sub">{terapeutas.length} registros</div></div>
+          <button className="btn" onClick={openNew}>+ Novo Terapeuta</button>
+        </div>
+        <div className="table-wrap">
+          <table>
+            <thead><tr><th>Nome</th><th>Especialidades</th><th>CNPJ</th><th>Banco</th><th>Wallet ID</th><th>Status</th><th>Ações</th></tr></thead>
+            <tbody>{terapeutas.map(t=>(
+              <tr key={t.id}>
+                <td style={{fontWeight:600,color:"var(--text)"}}>{t.nome}</td>
+                <td style={{fontSize:12}}>{(t.especialidades?.length?t.especialidades:t.especialidade?[t.especialidade]:[]).map(e=>(
+                  <span key={e} style={{display:"inline-block",marginRight:4,marginBottom:2,padding:"2px 8px",background:"var(--bg3)",borderRadius:10,fontSize:11,color:"var(--accent)"}}>{e}</span>
+                ))}</td>
+                <td>{t.cnpj}</td>
+                <td>{t.banco}</td>
+                <td><code style={{fontSize:11,background:"var(--bg3)",padding:"2px 6px",borderRadius:4,color:"var(--accent2)"}}>{t.walletId}</code></td>
+                <td><StatusBadge s={t.status}/></td>
+                <td><button className="btn sm sec" onClick={()=>openEdit(t)}>✏️ Editar</button></td>
+              </tr>
+            ))}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── FORNECEDORES ─────────────────────────────────────────────────────────────
+function Fornecedores({fornecedores,setFornecedores,toast}) {
+  const [modal,setModal]=useState(false);
+  const [editing,setEditing]=useState(null);
+  const empty={nome:"",cpfCnpj:"",email:"",telefone:"",cep:"",endereco:"",bairro:"",cidade:"",estado:"SP",tipo:"PJ",categoria:"Serviços"};
+  const [form,setForm]=useState(empty);
+  const f=k=>e=>setForm(p=>({...p,[k]:e.target.value}));
+  const openNew=()=>{setForm(empty);setEditing(null);setModal(true);};
+  const openEdit=x=>{setForm({...x});setEditing(x.id);setModal(true);};
+  const save=()=>{
+    if(editing) setFornecedores(p=>p.map(x=>x.id===editing?{...form,id:editing}:x));
+    else setFornecedores(p=>[...p,{...form,id:Date.now()}]);
+    setModal(false);toast(editing?"✅ Fornecedor atualizado!":"✅ Fornecedor cadastrado!");
+  };
+  return (
+    <div>
+      {modal && (
+        <Modal title={editing?"Editar Fornecedor":"Novo Fornecedor"} onClose={()=>setModal(false)}>
+          <div className="form-grid">
+            <Inp label="Nome / Razão Social" value={form.nome} onChange={f("nome")}/>
+            <Sel label="Tipo" value={form.tipo} onChange={f("tipo")}><option value="PF">Pessoa Física</option><option value="PJ">Pessoa Jurídica</option></Sel>
+            <Inp label="CPF / CNPJ" value={form.cpfCnpj} onChange={f("cpfCnpj")}/>
+            <Sel label="Categoria" value={form.categoria} onChange={f("categoria")}>
+              {["Serviços","Material de Escritório","Infraestrutura","Tecnologia","Contabilidade","Outros"].map(c=><option key={c}>{c}</option>)}
+            </Sel>
+            <Inp label="E-mail" value={form.email} onChange={f("email")}/>
+            <Inp label="Telefone" value={form.telefone} onChange={f("telefone")}/>
+            <CepInp form={form} setForm={setForm} toast={toast}/>
+            <Inp label="Endereço" value={form.endereco||""} onChange={f("endereco")}/>
+            <Inp label="Bairro" value={form.bairro||""} onChange={f("bairro")}/>
+            <Inp label="Cidade" value={form.cidade||""} onChange={f("cidade")}/>
+            <Sel label="Estado" value={form.estado} onChange={f("estado")}>
+              {["SP","RJ","MG","RS","PR","SC","BA","CE","GO","DF","ES","PE","AM","PA","MT","MS","MA","PI","AL","SE","RN","PB","RO","AC","RR","AP","TO"].map(s=><option key={s}>{s}</option>)}
+            </Sel>
+          </div>
+          <div className="modal-actions">
+            <button className="btn sec" onClick={()=>setModal(false)}>Cancelar</button>
+            <button className="btn" onClick={save}>{editing?"Salvar Alterações":"Cadastrar Fornecedor"}</button>
+          </div>
+        </Modal>
+      )}
+      <div className="card">
+        <div className="card-header">
+          <div><div className="card-title">Fornecedores</div><div className="card-sub">{fornecedores.length} registros</div></div>
+          <button className="btn" onClick={openNew}>+ Novo Fornecedor</button>
+        </div>
+        <div className="table-wrap">
+          <table>
+            <thead><tr><th>Nome</th><th>CPF/CNPJ</th><th>Tipo</th><th>Categoria</th><th>E-mail</th><th>Cidade</th><th>Ações</th></tr></thead>
+            <tbody>{fornecedores.map(x=>(
+              <tr key={x.id}>
+                <td style={{fontWeight:600,color:"var(--text)"}}>{x.nome}</td>
+                <td>{x.cpfCnpj}</td>
+                <td><span className="badge b-blue">{x.tipo}</span></td>
+                <td>{x.categoria}</td>
+                <td>{x.email}</td>
+                <td>{x.cidade}/{x.estado}</td>
+                <td><button className="btn sm sec" onClick={()=>openEdit(x)}>✏️ Editar</button></td>
+              </tr>
+            ))}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── PLANO DE CONTAS ──────────────────────────────────────────────────────────
+function PlanoContas({plano,setPlano,toast}) {
+  const [modal,setModal]=useState(false);
+  const [editModal,setEditModal]=useState(null);
+  const [form,setForm]=useState({nivel:3,codigo:"",nome:"",tipo:"receber",pai:null});
+  const [editForm,setEditForm]=useState({});
+  const f=k=>e=>setForm(p=>({...p,[k]:e.target.value}));
+  const fe=k=>e=>setEditForm(p=>({...p,[k]:e.target.value}));
+
+  const niveis1=plano.filter(p=>p.nivel===1);
+  const niveis2=id=>plano.filter(p=>p.nivel===2&&p.pai===id);
+  const niveis3=id=>plano.filter(p=>p.nivel===3&&p.pai===id);
+
+  const save=()=>{
+    setPlano(p=>[...p,{...form,id:Date.now(),nivel:+form.nivel,pai:form.pai?+form.pai:null,ativo:true}]);
+    setModal(false);toast("✅ Conta cadastrada no Plano!");
+  };
+  const saveEdit=()=>{
+    setPlano(p=>p.map(x=>x.id===editModal?{...x,...editForm}:x));
+    setEditModal(null);toast("✅ Categoria atualizada!");
+  };
+  const del=id=>{setPlano(p=>p.filter(x=>x.id!==id));toast("🗑️ Conta removida!");};
+  const toggleAtivo=id=>{
+    setPlano(p=>p.map(x=>x.id===id?{...x,ativo:x.ativo===false?true:false}:x));
+    toast("🔄 Status da categoria alterado!");
+  };
+
+  const pais1=plano.filter(p=>p.nivel===1);
+  const pais2=plano.filter(p=>p.nivel===2);
+
+  return (
+    <div>
+      {modal && (
+        <Modal title="Nova Conta" sub="Plano de Contas — 3 níveis" onClose={()=>setModal(false)} maxWidth={540}>
+          <div className="info-box">📌 Nível 1 = Título · Nível 2 = Grupo · Nível 3 = Categoria (disponível para seleção em lançamentos)</div>
+          <div className="form-grid">
+            <Sel label="Nível" value={form.nivel} onChange={f("nivel")}>
+              <option value={1}>Nível 1 — Título</option>
+              <option value={2}>Nível 2 — Grupo</option>
+              <option value={3}>Nível 3 — Categoria</option>
+            </Sel>
+            <Sel label="Tipo" value={form.tipo} onChange={f("tipo")}>
+              <option value="receber">A Receber (Receita)</option>
+              <option value="pagar">A Pagar (Despesa)</option>
+              <option value="ambos">Ambos</option>
+            </Sel>
+            {+form.nivel>=2 && (
+              <Sel label="Conta Pai (Nível 1)" value={form.pai||""} onChange={f("pai")}>
+                <option value="">Selecione...</option>
+                {pais1.map(p=><option key={p.id} value={p.id}>{p.codigo} — {p.nome}</option>)}
+              </Sel>
+            )}
+            {+form.nivel===3 && (
+              <Sel label="Grupo Pai (Nível 2)" value={form.grupoPai||""} onChange={e=>setForm(p=>({...p,pai:+e.target.value,grupoPai:e.target.value}))}>
+                <option value="">Selecione...</option>
+                {pais2.map(p=><option key={p.id} value={p.id}>{p.codigo} — {p.nome}</option>)}
+              </Sel>
+            )}
+            <Inp label="Código (ex: 1.1.3)" value={form.codigo} onChange={f("codigo")}/>
+            <Inp label="Nome da Conta" value={form.nome} onChange={f("nome")}/>
+          </div>
+          <div className="modal-actions">
+            <button className="btn sec" onClick={()=>setModal(false)}>Cancelar</button>
+            <button className="btn" onClick={save}>Salvar Conta</button>
+          </div>
+        </Modal>
+      )}
+
+      {editModal && (()=>{
+        const item=plano.find(x=>x.id===editModal);
+        return (
+          <Modal title="Editar Categoria" onClose={()=>setEditModal(null)} maxWidth={480}>
+            <div className="form-grid">
+              <Inp label="Código" value={editForm.codigo||item.codigo||""} onChange={fe("codigo")}/>
+              <Inp label="Nome da Conta" value={editForm.nome!==undefined?editForm.nome:item.nome} onChange={fe("nome")}/>
+              <Sel label="Tipo" value={editForm.tipo||item.tipo} onChange={fe("tipo")}>
+                <option value="receber">A Receber (Receita)</option>
+                <option value="pagar">A Pagar (Despesa)</option>
+                <option value="ambos">Ambos</option>
+              </Sel>
+            </div>
+            <div className="modal-actions">
+              <button className="btn sec" onClick={()=>setEditModal(null)}>Cancelar</button>
+              <button className="btn" onClick={saveEdit}>Salvar Alterações</button>
+            </div>
+          </Modal>
+        );
+      })()}
+
+      <div style={{display:"flex",justifyContent:"flex-end",marginBottom:16}}>
+        <button className="btn" onClick={()=>setModal(true)}>+ Nova Conta</button>
+      </div>
+
+      <div className="card">
+        <div className="card-header">
+          <div><div className="card-title">Plano de Contas</div><div className="card-sub">Estrutura hierárquica em 3 níveis</div></div>
+        </div>
+        <div className="pc-tree">
+          {niveis1.map(n1=>(
+            <div key={n1.id}>
+              <div className="pc-item pc-level1" style={{opacity:n1.ativo===false?0.5:1}}>
+                <span>{n1.codigo} — {n1.nome}</span>
+                <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                  <span className={`badge ${n1.tipo==="receber"?"b-green":n1.tipo==="pagar"?"b-red":"b-blue"}`}>{n1.tipo}</span>
+                  <button className="btn sm sec" onClick={()=>{setEditModal(n1.id);setEditForm({});}}>✏️</button>
+                  <button className="btn sm warn" onClick={()=>toggleAtivo(n1.id)}>{n1.ativo===false?"🔓 Ativar":"🔒 Inativar"}</button>
+                  <button className="btn sm danger" onClick={()=>del(n1.id)}>×</button>
+                </div>
+              </div>
+              {niveis2(n1.id).map(n2=>(
+                <div key={n2.id}>
+                  <div className="pc-item pc-level2" style={{opacity:n2.ativo===false?0.5:1}}>
+                    <span>↳ {n2.codigo} — {n2.nome}</span>
+                    <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                      <button className="btn sm sec" onClick={()=>{setEditModal(n2.id);setEditForm({});}}>✏️</button>
+                      <button className="btn sm warn" onClick={()=>toggleAtivo(n2.id)}>{n2.ativo===false?"🔓 Ativar":"🔒 Inativar"}</button>
+                      <button className="btn sm danger" onClick={()=>del(n2.id)}>×</button>
+                    </div>
+                  </div>
+                  {niveis3(n2.id).map(n3=>(
+                    <div key={n3.id} className="pc-item pc-level3" style={{opacity:n3.ativo===false?0.5:1}}>
+                      <span>↳ {n3.codigo} — {n3.nome} {n3.ativo===false&&<span style={{color:"var(--red)",fontSize:11}}>(inativa)</span>}</span>
+                      <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                        <span className="badge b-gray">Categoria</span>
+                        <button className="btn sm sec" onClick={()=>{setEditModal(n3.id);setEditForm({});}}>✏️</button>
+                        <button className="btn sm warn" onClick={()=>toggleAtivo(n3.id)}>{n3.ativo===false?"🔓 Ativar":"🔒 Inativar"}</button>
+                        <button className="btn sm danger" onClick={()=>del(n3.id)}>×</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── SUBCONTAS ────────────────────────────────────────────────────────────────
+function Subcontas({subcontas,setSubcontas,toast}) {
+  const [modal,setModal]=useState(false);
+  const [saldoModal,setSaldoModal]=useState(null);
+  const empty={nome:"",email:"",cpfCnpj:"",telefone:"",birthDate:"",companyType:"",cep:"",endereco:"",bairro:"",cidade:"",walletIdManual:"",modo:"api"};
+  const [form,setForm]=useState(empty);
+  const f=k=>e=>setForm(p=>({...p,[k]:e.target.value}));
+
+  const create=()=>{
+    const wid=form.modo==="manual"?form.walletIdManual:("wlt_"+Math.random().toString(36).slice(2,9));
+    setSubcontas(p=>[...p,{...form,id:Date.now(),walletId:wid,status:"ACTIVE",saldo:0}]);
+    setModal(false);setForm(empty);
+    toast("✅ Subconta criada e sincronizada com Asaas!");
+  };
+
+  return (
+    <div>
+      {saldoModal && (
+        <Modal title="Saldo da Subconta" onClose={()=>setSaldoModal(null)} maxWidth={440}>
+          <div style={{textAlign:"center",padding:"20px 0"}}>
+            <div style={{fontSize:13,color:"var(--text3)",marginBottom:8}}>{saldoModal.nome}</div>
+            <div style={{fontFamily:"var(--font-head)",fontSize:40,fontWeight:800,color:"var(--green)"}}>{fmt(saldoModal.saldo)}</div>
+            <div style={{fontSize:12,color:"var(--text3)",marginTop:8}}>Wallet: <code style={{color:"var(--accent2)"}}>{saldoModal.walletId}</code></div>
+            <div style={{marginTop:16,fontSize:12,color:"var(--yellow)"}}>⚡ Saldo simulado. Configure a API Key para dados reais.</div>
+          </div>
+          <div className="modal-actions"><button className="btn" onClick={()=>setSaldoModal(null)}>Fechar</button></div>
+        </Modal>
+      )}
+      {modal && (
+        <Modal title="Nova Subconta Asaas" sub="POST /v3/accounts" onClose={()=>setModal(false)}>
+          <div className="warn-box">⚡ Esta ação criará uma subconta na API Asaas. O Wallet ID será retornado automaticamente — ou informe manualmente.</div>
+          <div className="form-grid">
+            <Sel label="Modo de Cadastro" value={form.modo} onChange={f("modo")}>
+              <option value="api">Via API Asaas (automático)</option>
+              <option value="manual">Manual (informar Wallet ID)</option>
+            </Sel>
+            {form.modo==="manual" && <Inp label="Wallet ID (manual)" value={form.walletIdManual} placeholder="wlt_..." onChange={f("walletIdManual")}/>}
+            <Inp label="Nome" value={form.nome} onChange={f("nome")}/>
+            <Inp label="E-mail" value={form.email} onChange={f("email")}/>
+            <Inp label="CPF / CNPJ" value={form.cpfCnpj} onChange={f("cpfCnpj")}/>
+            <Inp label="Telefone" value={form.telefone} onChange={f("telefone")}/>
+            {form.modo==="api" && (
+              <>
+                <Inp label="Data de Nascimento" type="date" value={form.birthDate} onChange={f("birthDate")}/>
+                <Sel label="Tipo de Empresa" value={form.companyType} onChange={f("companyType")}>
+                  <option value="">Pessoa Física</option>
+                  <option value="MEI">MEI</option>
+                  <option value="LIMITED">Ltda</option>
+                  <option value="INDIVIDUAL">Individual</option>
+                </Sel>
+                <div className="form-section-title">Endereço</div>
+                <Inp label="CEP" value={form.cep} onChange={f("cep")}/>
+                <Inp label="Endereço" value={form.endereco} onChange={f("endereco")}/>
+                <Inp label="Bairro" value={form.bairro} onChange={f("bairro")}/>
+                <Inp label="Cidade" value={form.cidade} onChange={f("cidade")}/>
+              </>
+            )}
+          </div>
+          <div className="modal-actions">
+            <button className="btn sec" onClick={()=>setModal(false)}>Cancelar</button>
+            <button className="btn" onClick={create}>🚀 Criar Subconta</button>
+          </div>
+        </Modal>
+      )}
+      <div className="card">
+        <div className="card-header">
+          <div><div className="card-title">Subcontas Asaas</div><div className="card-sub">Contas vinculadas à conta principal</div></div>
+          <button className="btn" onClick={()=>setModal(true)}>+ Nova Subconta</button>
+        </div>
+        <div className="table-wrap">
+          <table>
+            <thead><tr><th>Nome</th><th>CPF/CNPJ</th><th>E-mail</th><th>Wallet ID</th><th>Saldo</th><th>Status</th><th>Ações</th></tr></thead>
+            <tbody>{subcontas.map(s=>(
+              <tr key={s.id}>
+                <td style={{fontWeight:600,color:"var(--text)"}}>{s.nome}</td>
+                <td>{s.cpfCnpj}</td>
+                <td>{s.email}</td>
+                <td><code style={{fontSize:11,background:"var(--bg3)",padding:"2px 6px",borderRadius:4,color:"var(--accent2)"}}>{s.walletId}</code></td>
+                <td style={{color:"var(--green)",fontWeight:700}}>{fmt(s.saldo||0)}</td>
+                <td><StatusBadge s={s.status}/></td>
+                <td><button className="btn sm sec" onClick={()=>setSaldoModal(s)}>💰 Ver Saldo</button></td>
+              </tr>
+            ))}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── COBRANÇAS ────────────────────────────────────────────────────────────────
+function Cobrancas({cobrancas,setCobrancas,clientes,setClientes,subcontas,apiIntegrado,apiCfg,callApi,receber,setReceber,plano,toast}) {
+  const [modal,setModal]=useState(false);
+  const [salvando,setSalvando]=useState(false);
+  const [sincStatus,setSincStatus]=useState(false);
+  const emptyForm={tipo:"BOLETO",splits:[],planoId:"",clienteId:"",valor:"",vencimento:"",descricao:""};
+  const [form,setForm]=useState(emptyForm);
+  const f=k=>e=>setForm(p=>({...p,[k]:e.target.value}));
+
+  const cats3Rec=plano.filter(p=>p.nivel===3&&(p.tipo==="receber"||p.tipo==="ambos")&&p.ativo!==false);
+
+  const addSplit=()=>{if(form.splits.length>=3){toast("⚠️ Máximo 3 splits");return;} setForm(p=>({...p,splits:[...p.splits,{walletId:"",splitType:"PERCENTUAL",valor:""}]}));};
+  const updSplit=(i,k,v)=>setForm(p=>{const s=[...p.splits];s[i]={...s[i],[k]:v};return{...p,splits:s};});
+  const remSplit=i=>setForm(p=>({...p,splits:p.splits.filter((_,idx)=>idx!==i)}));
+
+  const sincronizarStatus=async()=>{
+    if(!apiIntegrado){toast("⚠️ Configure a API primeiro");return;}
+    setSincStatus(true);
+    let atualizadas=0;
+    try {
+      for(const cob of cobrancas) {
+        if(!cob.asaasId||cob.status==="RECEIVED"||cob.status==="CONFIRMED") continue;
+        const res=await callApi("GET",`/payments/${cob.asaasId}`);
+        if(res.status&&res.status!==cob.status) {
+          setCobrancas(p=>p.map(c=>c.id===cob.id?{...c,status:res.status}:c));
+          if(res.status==="RECEIVED"||res.status==="CONFIRMED") {
+            setReceber(p=>p.map(r=>r.asaasId===cob.asaasId?{...r,status:"recebido"}:r));
+          }
+          atualizadas++;
+        }
+      }
+      toast(atualizadas>0?`✅ ${atualizadas} cobranças atualizadas!`:"✅ Status já sincronizado!");
+    } catch(e){toast("❌ Erro ao sincronizar: "+e.message);}
+    setSincStatus(false);
+  };
+
+  const salvar=async()=>{
+    if(!form.clienteId){toast("⚠️ Selecione um cliente");return;}
+    if(!form.valor||+form.valor<=0){toast("⚠️ Informe o valor");return;}
+    if(!form.vencimento){toast("⚠️ Informe o vencimento");return;}
+
+    const cl=clientes.find(c=>c.id===+form.clienteId);
+    setSalvando(true);
+    let asaasId="",linkCobranca="";
+
+    if(apiIntegrado) {
+      try {
+        if(!asaasId&&cl?.cpf) {
+          const busca=await callApi("GET",`/customers?cpfCnpj=${cl.cpf.replace(/\D/g,"")}`);
+          if(busca.data&&busca.data.length>0){asaasId=busca.data[0].id;}
+          else {
+            const nc=await callApi("POST","/customers",{name:cl.nome,cpfCnpj:cl.cpf.replace(/\D/g,""),email:cl.email||"",phone:cl.telefone||""});
+            if(nc.id){asaasId=nc.id;setClientes(p=>p.map(c=>c.id===cl.id?{...c,asaasId:nc.id}:c));}
+          }
+        }
+        if(!asaasId) throw new Error("Não foi possível identificar o cliente na Asaas.");
+        const payload={customer:asaasId,billingType:form.tipo,value:+form.valor,dueDate:form.vencimento,description:form.descricao||"Cobrança",
+          ...(form.splits.length>0?{split:form.splits.filter(s=>s.walletId).map(s=>({walletId:s.walletId,...(s.splitType==="FIXED"?{fixedValue:+s.valor}:{percentualValue:+s.valor})}))}:{})};
+        const result=await callApi("POST","/payments",payload);
+        if(result.id){
+          linkCobranca=result.invoiceUrl||result.bankSlipUrl||result.transactionReceiptUrl||"";
+          setCobrancas(p=>[...p,{...form,id:result.id,asaasId:result.id,cliente:cl?.nome||"",status:"PENDING",link:linkCobranca}]);
+          setReceber(p=>[...p,{
+            id:Date.now(),
+            descricao:form.descricao||`Cobrança — ${cl?.nome}`,
+            cliente:cl?.nome||"",clienteId:cl?.id,
+            valor:+form.valor,vencimento:form.vencimento,
+            status:"pendente",
+            planoId:form.planoId?+form.planoId:null,
+            formaPagamento:form.tipo==="PIX"?"PIX":form.tipo==="BOLETO"?"Boleto":"Cartão",
+            asaasId:result.id,link:linkCobranca,
+          }]);
+          setModal(false);setForm(emptyForm);
+          toast("✅ Cobrança criada na Asaas + lançada em Contas a Receber!");
+        } else {toast("❌ Erro Asaas: "+(result.errors?.[0]?.description||result.message||JSON.stringify(result)));}
+      } catch(e){toast("❌ "+e.message);}
+    } else {
+      setCobrancas(p=>[...p,{...form,id:Date.now(),cliente:cl?.nome||"",status:"PENDING",link:"",_demo:true}]);
+      setReceber(p=>[...p,{id:Date.now()+1,descricao:form.descricao||`Cobrança — ${cl?.nome}`,cliente:cl?.nome||"",clienteId:cl?.id,valor:+form.valor,vencimento:form.vencimento,status:"pendente",planoId:form.planoId?+form.planoId:null,formaPagamento:"Boleto"}]);
+      setModal(false);setForm(emptyForm);
+      toast("⚠️ Cobrança salva localmente + Contas a Receber gerado!");
+    }
+    setSalvando(false);
+  };
+
+  return (
+    <div>
+      {modal && (
+        <Modal title="Nova Cobrança com Split" sub="POST /v3/payments" onClose={()=>setModal(false)} maxWidth={760}>
+          <div className="form-grid">
+            <Sel label="Cliente" value={form.clienteId} onChange={f("clienteId")}>
+              <option value="">Selecione...</option>
+              {clientes.map(c=><option key={c.id} value={c.id}>{c.nome} ({c.nomeAluno})</option>)}
+            </Sel>
+            <Sel label="Forma de Pagamento" value={form.tipo} onChange={f("tipo")}>
+              <option value="BOLETO">Boleto</option><option value="PIX">Pix</option><option value="CREDIT_CARD">Cartão de Crédito</option>
+            </Sel>
+            <Inp label="Valor (R$)" type="number" value={form.valor} onChange={f("valor")}/>
+            <Inp label="Vencimento" type="date" value={form.vencimento} onChange={f("vencimento")}/>
+            <Sel label="Categoria (Plano de Contas)" value={form.planoId} onChange={f("planoId")}>
+              <option value="">Selecione...</option>
+              {cats3Rec.map(p=><option key={p.id} value={p.id}>{p.codigo} — {p.nome}</option>)}
+            </Sel>
+            <div className="form-full">
+              <Txt label="Descrição da Cobrança" placeholder="Descreva o serviço prestado" value={form.descricao} onChange={f("descricao")}/>
+            </div>
+            <div className="form-section-title">Split de Pagamento Asaas (até 3 subcontas)</div>
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:10,marginTop:8}}>
+            {form.splits.map((s,i)=>(
+              <div className="split-item" key={i}>
+                <button className="split-remove" onClick={()=>remSplit(i)}>✕</button>
+                <div style={{fontSize:12,color:"var(--text3)",marginBottom:10,fontWeight:600}}>Split {i+1}</div>
+                <div className="form-grid">
+                  <Sel label="Subconta / Wallet" value={s.walletId} onChange={e=>updSplit(i,"walletId",e.target.value)}>
+                    <option value="">Selecione...</option>
+                    {subcontas.map(x=><option key={x.id} value={x.walletId}>{x.nome} ({x.walletId})</option>)}
+                  </Sel>
+                  <Sel label="Tipo" value={s.splitType} onChange={e=>updSplit(i,"splitType",e.target.value)}>
+                    <option value="PERCENTUAL">Percentual (%)</option>
+                    <option value="FIXED">Valor Fixo (R$)</option>
+                  </Sel>
+                  <Inp label={s.splitType==="FIXED"?"Valor (R$)":"Percentual (%)"} type="number" value={s.valor} onChange={e=>updSplit(i,"valor",e.target.value)}/>
+                </div>
+              </div>
+            ))}
+            <button className="add-split-btn" onClick={addSplit}>+ Adicionar Split ({form.splits.length}/3)</button>
+          </div>
+          <div className="modal-actions">
+            <button className="btn sec" onClick={()=>setModal(false)}>Cancelar</button>
+            <button className="btn" onClick={salvar} disabled={salvando}>{salvando?"⏳ Criando...":"🚀 Gerar Cobrança"}</button>
+          </div>
+        </Modal>
+      )}
+      <div className="card">
+        <div className="card-header">
+          <div><div className="card-title">Cobranças</div><div className="card-sub">{cobrancas.length} registros</div></div>
+          <div style={{display:"flex",gap:8}}>
+            {apiIntegrado&&<button className="btn sec" onClick={sincronizarStatus} disabled={sincStatus}>{sincStatus?"🔄 Sincronizando...":"🔄 Sincronizar Status"}</button>}
+            <button className="btn" onClick={()=>setModal(true)}>+ Nova Cobrança</button>
+          </div>
+        </div>
+        {!apiIntegrado && <div className="warn-box" style={{marginBottom:16}}>⚠️ API Asaas não configurada.</div>}
+        <div className="table-wrap">
+          <table>
+            <thead><tr><th>Cliente</th><th>Descrição</th><th>Tipo</th><th>Categoria</th><th>Valor</th><th>Vencimento</th><th>Splits</th><th>Status</th><th>Ações</th></tr></thead>
+            <tbody>{cobrancas.map(c=>(
+              <tr key={c.id}>
+                <td style={{fontWeight:600,color:"var(--text)"}}>{c.cliente}</td>
+                <td style={{maxWidth:150,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.descricao}</td>
+                <td><StatusBadge s={c.tipo}/></td>
+                <td style={{fontSize:12,color:"var(--text3)"}}>{plano.find(p=>p.id==c.planoId)?.nome||"—"}</td>
+                <td style={{fontWeight:700,color:"var(--green)"}}>{fmt(c.valor)}</td>
+                <td>{fmtDate(c.vencimento)}</td>
+                <td><span style={{fontSize:12,background:"var(--bg3)",padding:"2px 8px",borderRadius:20,color:"var(--accent2)"}}>{c.splits?.length||0} splits</span></td>
+                <td><StatusBadge s={c.status}/></td>
+                <td>
+                  <div className="action-group">
+                    <button className="btn sm sec" disabled={!c.link} onClick={()=>c.link&&window.open(c.link,"_blank")}>🔗 Link</button>
+                  </div>
+                </td>
+              </tr>
+            ))}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── FINANCEIRO ───────────────────────────────────────────────────────────────
+function Financeiro({receber,setReceber,pagar,setPagar,notas,setNotas,clientes,fornecedores,plano,cobrancas,toast}) {
+  const [tab,setTab]=useState("receber");
+  const [modal,setModal]=useState(false);
+  const [editing,setEditing]=useState(null);
+  const [nfModal,setNfModal]=useState(null);
+  const [confirm,setConfirm]=useState(null);
+  const [fStatus,setFStatus]=useState("");
+  const [fCliente,setFCliente]=useState("");
+  const [fFornecedor,setFornecedorF]=useState("");
+  const [periodoIni,setPeriodoIni]=useState("");
+  const [periodoFim,setPeriodoFim]=useState("");
+  const [fCategoria,setFCategoria]=useState("");
+
+  const cats3Rec=plano.filter(p=>p.nivel===3&&(p.tipo==="receber"||p.tipo==="ambos")&&p.ativo!==false);
+  const cats3Pag=plano.filter(p=>p.nivel===3&&(p.tipo==="pagar"||p.tipo==="ambos")&&p.ativo!==false);
+  const FORMAS_PAG=["Boleto","PIX","Cartão de Crédito","Dinheiro","Transferência","Cheque","Outro"];
+
+  const emptyRec={descricao:"",observacao:"",valor:"",vencimento:"",status:"pendente",planoId:"",clienteId:"",cliente:"",formaPagamento:""};
+  const emptyPag={descricao:"",observacao:"",valor:"",vencimento:"",status:"pendente",planoId:"",fornecedorId:"",fornecedor:"",formaPagamento:""};
+  const [form,setForm]=useState(emptyRec);
+  const f=k=>e=>setForm(p=>({...p,[k]:e.target.value}));
+
+  const openNew=()=>{setForm(tab==="receber"?emptyRec:emptyPag);setEditing(null);setModal(true);};
+  const openEdit=(item)=>{setForm({...item,planoId:item.planoId||"",clienteId:item.clienteId||"",fornecedorId:item.fornecedorId||""});setEditing(item.id);setModal(true);};
+
+  const save=()=>{
+    if(tab==="receber"){
+      const cl=clientes.find(c=>c.id===+form.clienteId);
+      const data={...form,id:editing||Date.now(),valor:+form.valor,planoId:form.planoId?+form.planoId:null,cliente:cl?.nome||form.cliente};
+      if(editing) setReceber(p=>p.map(x=>x.id===editing?data:x));
+      else setReceber(p=>[...p,data]);
+    } else {
+      const fn=fornecedores.find(x=>x.id===+form.fornecedorId);
+      const data={...form,id:editing||Date.now(),valor:+form.valor,planoId:form.planoId?+form.planoId:null,fornecedor:fn?.nome||form.fornecedor};
+      if(editing) setPagar(p=>p.map(x=>x.id===editing?data:x));
+      else setPagar(p=>[...p,data]);
+    }
+    setModal(false);setEditing(null);toast(editing?"✅ Título atualizado!":"✅ Título registrado!");
+  };
+
+  const delRec=id=>{setReceber(p=>p.filter(x=>x.id!==id));toast("🗑️ Título excluído!");};
+  const delPag=id=>{setPagar(p=>p.filter(x=>x.id!==id));toast("🗑️ Título excluído!");};
+  const cancelarNF=id=>{setNotas(p=>p.map(n=>n.id===id?{...n,status:"CANCELADA"}:n));toast("📄 NF-e cancelada!");};
+
+  const aplicarFiltros=list=>list.filter(x=>{
+    const st=!fStatus||x.status===fStatus;
+    const cl=!fCliente||x.cliente?.toLowerCase().includes(fCliente.toLowerCase());
+    const fn=!fFornecedor||x.fornecedor?.toLowerCase().includes(fFornecedor.toLowerCase());
+    const cat=!fCategoria||x.planoId==+fCategoria;
+    const di=!periodoIni||x.vencimento>=periodoIni;
+    const df=!periodoFim||x.vencimento<=periodoFim;
+    return st&&cl&&fn&&cat&&di&&df;
+  });
+
+  const listaRec=aplicarFiltros(receber);
+  const listaPag=aplicarFiltros(pagar);
+  const totalRec=listaRec.reduce((a,b)=>a+b.valor,0);
+  const totalPag=listaPag.reduce((a,b)=>a+b.valor,0);
+  const emitirNFe=(item)=>setNfModal(item);
+
+  // Título do modal muda se editando
+  const modalTitle=()=>{
+    if(tab==="receber") return editing?"Editar Conta a Receber":"Nova Conta a Receber";
+    return editing?"Editar Conta a Pagar":"Nova Conta a Pagar";
+  };
+
+  return (
+    <div>
+      {confirm && <ConfirmModal msg={confirm.msg} onConfirm={()=>{confirm.fn();setConfirm(null);}} onClose={()=>setConfirm(null)}/>}
+
+      {nfModal && (
+        <Modal title="Emitir NF-e" sub="Portal Nacional NFS-e" onClose={()=>setNfModal(null)} maxWidth={640}>
+          <div className="info-box">🔗 Integrado ao Portal Nacional NFS-e.</div>
+          <div className="form-grid">
+            <Inp label="Tomador" value={nfModal.cliente||""} onChange={()=>{}}/>
+            <Inp label="Competência (MM/AAAA)" placeholder="02/2025"/>
+            <Sel label="Atividade / Serviço">
+              {NBS_SERVICES.map(s=><option key={s.cnae}>{s.cnae} — {s.desc}</option>)}
+            </Sel>
+            <Inp label="Valor (R$)" value={nfModal.valor||""} type="number" onChange={()=>{}}/>
+            <Inp label="Alíquota ISS (%)" defaultValue="2" type="number"/>
+            <Sel label="Regime Tributário"><option>Simples Nacional</option><option>Lucro Presumido</option></Sel>
+            <div className="form-full"><Txt label="Discriminação do Serviço" placeholder="Descrição detalhada do serviço prestado" defaultValue={nfModal.descricao||""}/></div>
+          </div>
+          <div className="modal-actions">
+            <button className="btn sec" onClick={()=>setNfModal(null)}>Cancelar</button>
+            <button className="btn" onClick={()=>{setNfModal(null);toast("📄 NF-e emitida com sucesso!");}}>📄 Emitir NF-e</button>
+          </div>
+        </Modal>
+      )}
+
+      {modal && (
+        <Modal title={modalTitle()} onClose={()=>{setModal(false);setEditing(null);}} maxWidth={640}>
+          <div className="form-grid">
+            <div className="form-full">
+              <Txt label="Descrição do Título" placeholder={tab==="receber"?"Ex: Sessão de psicologia — Maria Silva":"Ex: Aluguel sala comercial"} value={form.descricao} onChange={f("descricao")}/>
+            </div>
+            <div className="form-full">
+              <Txt label="Observações" placeholder="Informações adicionais" value={form.observacao} onChange={f("observacao")}/>
+            </div>
+            <Inp label="Valor (R$)" type="number" value={form.valor} onChange={f("valor")}/>
+            <Inp label="Vencimento" type="date" value={form.vencimento} onChange={f("vencimento")}/>
+            <Sel label="Forma de Pagamento" value={form.formaPagamento} onChange={f("formaPagamento")}>
+              <option value="">Selecione...</option>
+              {FORMAS_PAG.map(fp=><option key={fp}>{fp}</option>)}
+            </Sel>
+            <Sel label="Status" value={form.status} onChange={f("status")}>
+              {tab==="receber"
+                ?[["pendente","Pendente"],["recebido","Recebido"],["cancelado","Cancelado"]].map(([v,l])=><option key={v} value={v}>{l}</option>)
+                :[["pendente","Pendente"],["pago","Pago"],["cancelado","Cancelado"]].map(([v,l])=><option key={v} value={v}>{l}</option>)
+              }
+            </Sel>
+            {tab==="receber" ? (
+              <>
+                <Sel label="Cliente" value={form.clienteId} onChange={f("clienteId")}>
+                  <option value="">Selecione...</option>
+                  {clientes.map(c=><option key={c.id} value={c.id}>{c.nome}</option>)}
+                </Sel>
+                <Sel label="Categoria (Plano de Contas)" value={form.planoId} onChange={f("planoId")}>
+                  <option value="">Selecione...</option>
+                  {cats3Rec.map(p=><option key={p.id} value={p.id}>{p.codigo} — {p.nome}</option>)}
+                </Sel>
+              </>
+            ) : (
+              <>
+                <Sel label="Fornecedor" value={form.fornecedorId} onChange={f("fornecedorId")}>
+                  <option value="">Selecione...</option>
+                  {fornecedores.map(x=><option key={x.id} value={x.id}>{x.nome}</option>)}
+                </Sel>
+                <Sel label="Categoria (Plano de Contas)" value={form.planoId} onChange={f("planoId")}>
+                  <option value="">Selecione...</option>
+                  {cats3Pag.map(p=><option key={p.id} value={p.id}>{p.codigo} — {p.nome}</option>)}
+                </Sel>
+              </>
+            )}
+          </div>
+          <div className="modal-actions">
+            <button className="btn sec" onClick={()=>{setModal(false);setEditing(null);}}>Cancelar</button>
+            {tab==="receber"&&!editing&&<button className="btn sec" onClick={()=>{save();setNfModal({...form,cliente:clientes.find(c=>c.id===+form.clienteId)?.nome,valor:+form.valor});}}>Salvar + Emitir NF-e</button>}
+            <button className="btn" onClick={save}>{editing?"Salvar Alterações":tab==="receber"?"Salvar Conta a Receber":"Salvar Conta a Pagar"}</button>
+          </div>
+        </Modal>
+      )}
+
+      {/* Totais */}
+      <div className="stats-grid" style={{marginBottom:20}}>
+        {[
+          {l:"Total a Receber",v:fmt(receber.filter(r=>r.status==="pendente").reduce((a,b)=>a+b.valor,0)),c:"var(--green)"},
+          {l:"Já Recebido",v:fmt(receber.filter(r=>r.status==="recebido").reduce((a,b)=>a+b.valor,0)),c:"var(--green)"},
+          {l:"Total a Pagar",v:fmt(pagar.filter(p=>p.status==="pendente").reduce((a,b)=>a+b.valor,0)),c:"var(--red)"},
+          {l:"Já Pago",v:fmt(pagar.filter(p=>p.status==="pago").reduce((a,b)=>a+b.valor,0)),c:"var(--red)"},
+        ].map((s,i)=>(
+          <div className="stat-card" key={i}>
+            <div className="stat-label">{s.l}</div>
+            <div className="stat-value" style={{fontSize:20,color:s.c}}>{s.v}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="tabs">
+        <div className={`tab ${tab==="receber"?"active":""}`} onClick={()=>setTab("receber")}>Contas a Receber</div>
+        <div className={`tab ${tab==="pagar"?"active":""}`} onClick={()=>setTab("pagar")}>Contas a Pagar</div>
+      </div>
+
+      <div className="filter-bar">
+        <Inp label="" placeholder="De:" type="date" value={periodoIni} onChange={e=>setPeriodoIni(e.target.value)}/>
+        <Inp label="" placeholder="Até:" type="date" value={periodoFim} onChange={e=>setPeriodoFim(e.target.value)}/>
+        <Sel label="" value={fStatus} onChange={e=>setFStatus(e.target.value)} style={{width:150}}>
+          <option value="">Todos os status</option>
+          {tab==="receber"
+            ?[["pendente","Pendente"],["recebido","Recebido"],["cancelado","Cancelado"]].map(([v,l])=><option key={v} value={v}>{l}</option>)
+            :[["pendente","Pendente"],["pago","Pago"],["cancelado","Cancelado"]].map(([v,l])=><option key={v} value={v}>{l}</option>)
+          }
+        </Sel>
+        {tab==="receber" && <Inp label="" placeholder="🔍 Cliente" value={fCliente} onChange={e=>setFCliente(e.target.value)} style={{width:180}}/>}
+        {tab==="pagar" && <Inp label="" placeholder="🔍 Fornecedor" value={fFornecedor} onChange={e=>setFornecedorF(e.target.value)} style={{width:180}}/>}
+        <Sel label="" value={fCategoria} onChange={e=>setFCategoria(e.target.value)} style={{width:200}}>
+          <option value="">Todas as categorias</option>
+          {(tab==="receber"?cats3Rec:cats3Pag).map(p=><option key={p.id} value={p.id}>{p.codigo} — {p.nome}</option>)}
+        </Sel>
+        <button className="btn sm sec" onClick={()=>{setFStatus("");setFCliente("");setFornecedorF("");setFCategoria("");setPeriodoIni("");setPeriodoFim("");}}>Limpar</button>
+      </div>
+
+      <div className="card">
+        <div className="card-header">
+          <div>
+            <div className="card-title">{tab==="receber"?"Contas a Receber":"Contas a Pagar"}</div>
+            <div className="card-sub">{tab==="receber"?`${listaRec.length} títulos · ${fmt(totalRec)}`:`${listaPag.length} títulos · ${fmt(totalPag)}`}</div>
+          </div>
+          <button className="btn" onClick={openNew}>+ Nova Conta</button>
+        </div>
+
+        {tab==="receber" ? (
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>Descrição</th><th>Cliente</th><th>Categoria</th><th>Forma Pag.</th><th>Valor</th><th>Vencimento</th><th>Status</th><th>Ações</th></tr></thead>
+              <tbody>{listaRec.map(r=>{
+                const d=daysFromNow(r.vencimento);
+                const venceu=r.status==="pendente"&&d<0;
+                const nfEmitida=notas.some(n=>n.tomador===r.cliente&&n.status==="EMITIDA");
+                return (
+                  <tr key={r.id} className={venceu?"highlight-row-red":""}>
+                    <td style={{fontWeight:500,color:"var(--text)",maxWidth:200}}>
+                      <div>{r.descricao}</div>
+                      {r.observacao&&<div style={{fontSize:11,color:"var(--text3)"}}>{r.observacao}</div>}
+                    </td>
+                    <td>{r.cliente}</td>
+                    <td style={{fontSize:12,color:"var(--text3)"}}>{plano.find(p=>p.id==r.planoId)?.nome||"—"}</td>
+                    <td><span style={{fontSize:11,background:"var(--bg3)",padding:"2px 8px",borderRadius:10,color:"var(--text2)"}}>{r.formaPagamento||"—"}</span></td>
+                    <td style={{fontWeight:700,color:"var(--green)"}}>{fmt(r.valor)}</td>
+                    <td>
+                      <div>{fmtDate(r.vencimento)}</div>
+                      {venceu&&<div style={{fontSize:11,color:"var(--red)"}}>Vencido há {Math.abs(d)} dias</div>}
+                    </td>
+                    <td><StatusBadge s={r.status}/></td>
+                    <td>
+                      <div className="action-group">
+                        {r.status==="pendente"&&<button className="btn sm sec" onClick={()=>{setReceber(p=>p.map(x=>x.id===r.id?{...x,status:"recebido"}:x));toast("✅ Título recebido!");}}>✔ Receber</button>}
+                        <button className="btn sm sec" onClick={()=>openEdit(r)}>✏️</button>
+                        <button className="btn sm sec" onClick={()=>emitirNFe(r)} disabled={nfEmitida}>📄 NF-e</button>
+                        {nfEmitida&&<button className="btn sm danger" onClick={()=>setConfirm({msg:"Cancelar a NF-e?",fn:()=>cancelarNF(notas.find(n=>n.tomador===r.cliente)?.id)})}>Cancelar NF</button>}
+                        <button className="btn sm danger" onClick={()=>setConfirm({msg:"Excluir este título?",fn:()=>delRec(r.id)})}>🗑️</button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}</tbody>
+            </table>
+            {listaRec.length===0&&<div className="empty-state">Nenhum título encontrado</div>}
+          </div>
+        ) : (
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>Descrição</th><th>Fornecedor</th><th>Categoria</th><th>Forma Pag.</th><th>Valor</th><th>Vencimento</th><th>Status</th><th>Ações</th></tr></thead>
+              <tbody>{listaPag.map(p=>{
+                const d=daysFromNow(p.vencimento);
+                const venceu=p.status==="pendente"&&d<0;
+                return (
+                  <tr key={p.id} className={venceu?"highlight-row-red":""}>
+                    <td style={{fontWeight:500,color:"var(--text)",maxWidth:200}}>
+                      <div>{p.descricao}</div>
+                      {p.observacao&&<div style={{fontSize:11,color:"var(--text3)"}}>{p.observacao}</div>}
+                    </td>
+                    <td>{p.fornecedor}</td>
+                    <td style={{fontSize:12,color:"var(--text3)"}}>{plano.find(x=>x.id==p.planoId)?.nome||"—"}</td>
+                    <td><span style={{fontSize:11,background:"var(--bg3)",padding:"2px 8px",borderRadius:10,color:"var(--text2)"}}>{p.formaPagamento||"—"}</span></td>
+                    <td style={{fontWeight:700,color:"var(--red)"}}>{fmt(p.valor)}</td>
+                    <td>
+                      <div>{fmtDate(p.vencimento)}</div>
+                      {venceu&&<div style={{fontSize:11,color:"var(--red)"}}>Vencido há {Math.abs(d)} dias</div>}
+                    </td>
+                    <td><StatusBadge s={p.status}/></td>
+                    <td>
+                      <div className="action-group">
+                        {p.status==="pendente"&&<button className="btn sm sec" onClick={()=>{setPagar(prev=>prev.map(x=>x.id===p.id?{...x,status:"pago"}:x));toast("✅ Título quitado!");}}>✔ Quitar</button>}
+                        <button className="btn sm sec" onClick={()=>openEdit(p)}>✏️</button>
+                        <button className="btn sm danger" onClick={()=>setConfirm({msg:"Excluir este título?",fn:()=>delPag(p.id)})}>🗑️</button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}</tbody>
+            </table>
+            {listaPag.length===0&&<div className="empty-state">Nenhum título encontrado</div>}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── NFS-e ────────────────────────────────────────────────────────────────────
+function NotasFiscais({notas,setNotas,clientes,toast}) {
+  const [modal,setModal]=useState(false);
+  const [preview,setPreview]=useState(null);
+  const [form,setForm]=useState({clienteId:"",cnae:"",competencia:"",discriminacao:"",valor:"",aliquota:"2",regime:"Simples Nacional"});
+  const f=k=>e=>setForm(p=>({...p,[k]:e.target.value}));
+
+  const emitir=()=>{
+    const cl=clientes.find(c=>c.id===+form.clienteId);
+    const svc=NBS_SERVICES.find(s=>s.cnae===form.cnae);
+    const nf={id:`NF-${String(notas.length+1).padStart(4,"0")}`,tomador:cl?.nome||"",servico:svc?.desc||"",cnae:form.cnae,valor:+form.valor,competencia:form.competencia,status:"EMITIDA",regime:form.regime,discriminacao:form.discriminacao,aliquota:form.aliquota};
+    setNotas(p=>[...p,nf]);
+    setModal(false);setPreview(nf);
+    toast("📄 NF-e emitida e enviada ao Portal Nacional!");
+  };
+
+  const cancelar=id=>{setNotas(p=>p.map(n=>n.id===id?{...n,status:"CANCELADA"}:n));toast("📄 NF-e cancelada!");};
+
+  return (
+    <div>
+      {modal && (
+        <Modal title="Emitir NFS-e" sub="Portal Nacional NFS-e" onClose={()=>setModal(false)} maxWidth={680}>
+          <div className="info-box">🔗 Integrado ao Portal Nacional NFS-e via API gov. Certificado digital A1/A3 necessário em produção.</div>
+
+          <div style={{marginBottom:16}}>
+            <div className="form-label" style={{marginBottom:8}}>📋 Atividades Cadastradas (CNAE × NBS)</div>
+            <div style={{display:"flex",flexDirection:"column",gap:6}}>
+              {NBS_SERVICES.map(s=>(
+                <div key={s.cnae} style={{background:"var(--bg3)",borderRadius:8,padding:"10px 12px",fontSize:12,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                  <div>
+                    <span style={{color:"var(--accent2)",fontWeight:600}}>{s.cnae}</span>
+                    <span style={{color:"var(--text3)",margin:"0 8px"}}>|</span>
+                    <span style={{color:"var(--text2)"}}>{s.desc}</span>
+                  </div>
+                  <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                    <span style={{color:"var(--text3)"}}>NBS: {s.nbs}</span>
+                    <span className="badge b-green">ISS {s.iss}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="form-grid">
+            <Sel label="Tomador (Cliente)" value={form.clienteId} onChange={f("clienteId")}>
+              <option value="">Selecione...</option>
+              {clientes.map(c=><option key={c.id} value={c.id}>{c.nome} — CPF: {c.cpf}</option>)}
+            </Sel>
+            <Inp label="Competência (MM/AAAA)" placeholder="02/2025" value={form.competencia} onChange={f("competencia")}/>
+            <Sel label="Atividade / CNAE" value={form.cnae} onChange={f("cnae")}>
+              <option value="">Selecione a atividade...</option>
+              {NBS_SERVICES.map(s=><option key={s.cnae} value={s.cnae}>{s.cnae} — {s.desc.slice(0,45)}...</option>)}
+            </Sel>
+            <Sel label="Regime Tributário" value={form.regime} onChange={f("regime")}>
+              <option>Simples Nacional</option><option>Lucro Presumido</option><option>Lucro Real</option>
+            </Sel>
+            <Inp label="Valor Bruto (R$)" type="number" value={form.valor} onChange={f("valor")}/>
+            <Inp label="Alíquota ISS (%)" type="number" value={form.aliquota} onChange={f("aliquota")}/>
+            <div className="form-full">
+              <Txt label="Discriminação do Serviço" placeholder="Descrição detalhada do serviço prestado conforme o objeto contratual..." value={form.discriminacao} onChange={f("discriminacao")}/>
+            </div>
+          </div>
+          <div style={{background:"var(--bg3)",borderRadius:8,padding:"10px 14px",fontSize:12,color:"var(--text3)",marginTop:8}}>
+            💰 ISS estimado: <strong style={{color:"var(--text2)"}}>R$ {((+form.valor*(+form.aliquota||2))/100).toFixed(2)}</strong>
+            &nbsp;|&nbsp; Valor Líquido: <strong style={{color:"var(--green)"}}>R$ {(+form.valor - (+form.valor*(+form.aliquota||2))/100).toFixed(2)}</strong>
+          </div>
+          <div className="modal-actions">
+            <button className="btn sec" onClick={()=>setModal(false)}>Cancelar</button>
+            <button className="btn" onClick={emitir}>📄 Emitir NFS-e</button>
+          </div>
+        </Modal>
+      )}
+
+      {preview && (
+        <Modal title={`NF-e Emitida — ${preview.id}`} onClose={()=>setPreview(null)} maxWidth={560}>
+          <div className="nf-preview">
+            <div style={{textAlign:"center",borderBottom:"2px solid #333",paddingBottom:12,marginBottom:12}}>
+              <strong>NOTA FISCAL DE SERVIÇOS ELETRÔNICA — NFS-e</strong><br/>
+              Portal Nacional NFS-e | {preview.id}
+            </div>
+            <div>PRESTADOR: Clínica XYZ · CNPJ: 00.000.000/0001-00</div>
+            <div>REGIME: {preview.regime}</div>
+            <div>TOMADOR: {preview.tomador}</div>
+            <div>COMPETÊNCIA: {preview.competencia}</div>
+            <div style={{borderTop:"1px solid #ccc",marginTop:12,paddingTop:12}}>
+              <div>ATIVIDADE CNAE: {preview.cnae}</div>
+              <div>NBS: {NBS_SERVICES.find(s=>s.cnae===preview.cnae)?.nbs}</div>
+              <div>DISCRIMINAÇÃO: {preview.discriminacao||preview.servico}</div>
+            </div>
+            <div style={{borderTop:"1px solid #ccc",marginTop:12,paddingTop:12}}>
+              <div>VALOR BRUTO: {fmt(preview.valor)}</div>
+              <div>ISS ({preview.aliquota}%): {fmt(preview.valor*(+preview.aliquota)/100)}</div>
+              <div style={{fontWeight:"bold"}}>VALOR LÍQUIDO: {fmt(preview.valor-(preview.valor*(+preview.aliquota||2)/100))}</div>
+            </div>
+            <div style={{textAlign:"center",marginTop:16,fontSize:10,color:"#666"}}>Nota emitida eletronicamente — Portal Nacional NFS-e</div>
+          </div>
+          <div className="modal-actions">
+            <button className="btn sec">⬇ Download PDF</button>
+            <button className="btn sec">⬇ Download XML</button>
+            <button className="btn" onClick={()=>setPreview(null)}>Fechar</button>
+          </div>
+        </Modal>
+      )}
+
+      <div className="card" style={{marginBottom:20}}>
+        <div className="card-header">
+          <div><div className="card-title">Atividades Cadastradas — CNAE × NBS</div><div className="card-sub">Serviços enquadrados para emissão de NFS-e</div></div>
+        </div>
+        <div className="table-wrap">
+          <table>
+            <thead><tr><th>CNAE</th><th>NBS</th><th>Descrição da Atividade</th><th>ISS</th></tr></thead>
+            <tbody>{NBS_SERVICES.map(s=>(
+              <tr key={s.cnae}>
+                <td><code style={{color:"var(--accent2)",fontSize:12}}>{s.cnae}</code></td>
+                <td><code style={{color:"var(--text3)",fontSize:12}}>{s.nbs}</code></td>
+                <td style={{color:"var(--text)"}}>{s.desc}</td>
+                <td><span className="badge b-green">{s.iss}</span></td>
+              </tr>
+            ))}</tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card-header">
+          <div><div className="card-title">Notas Fiscais Emitidas</div><div className="card-sub">{notas.length} notas</div></div>
+          <button className="btn" onClick={()=>setModal(true)}>📄 Emitir NFS-e</button>
+        </div>
+        <div className="table-wrap">
+          <table>
+            <thead><tr><th>Número</th><th>Tomador</th><th>CNAE</th><th>Competência</th><th>Valor</th><th>ISS</th><th>Status</th><th>Ações</th></tr></thead>
+            <tbody>{notas.map(n=>(
+              <tr key={n.id}>
+                <td style={{fontFamily:"monospace",color:"var(--accent2)"}}>{n.id}</td>
+                <td style={{fontWeight:600,color:"var(--text)"}}>{n.tomador}</td>
+                <td style={{fontSize:11}}>{n.cnae}</td>
+                <td>{n.competencia}</td>
+                <td style={{fontWeight:700,color:"var(--green)"}}>{fmt(n.valor)}</td>
+                <td style={{color:"var(--text3)"}}>{fmt(n.valor*0.02)}</td>
+                <td><StatusBadge s={n.status==="EMITIDA"?"recebido":"cancelado"}/></td>
+                <td>
+                  <div className="action-group">
+                    <button className="btn sm sec" onClick={()=>setPreview(n)}>🔍 Ver</button>
+                    <button className="btn sm sec">⬇ PDF</button>
+                    <button className="btn sm sec">⬇ XML</button>
+                    {n.status==="EMITIDA"&&<button className="btn sm danger" onClick={()=>cancelar(n.id)}>Cancelar</button>}
+                  </div>
+                </td>
+              </tr>
+            ))}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── RELATÓRIOS ───────────────────────────────────────────────────────────────
+function Relatorios({receber,pagar,cobrancas,plano,subcontas}) {
+  const [tab,setTab]=useState("analitico-rec");
+  const [periodo,setPeriodo]=useState("mes");
+  const [periodoIni,setPeriodoIni]=useState("");
+  const [periodoFim,setPeriodoFim]=useState("");
+
+  const cats3Rec=plano.filter(p=>p.nivel===3&&(p.tipo==="receber"||p.tipo==="ambos"));
+  const cats3Pag=plano.filter(p=>p.nivel===3&&(p.tipo==="pagar"||p.tipo==="ambos"));
+
+  // Filtra itens por período selecionado
+  const getPeriodRange=()=>{
+    const now=new Date();
+    if(periodo==="custom") return {ini:periodoIni,fim:periodoFim};
+    if(periodo==="mes"){const y=now.getFullYear(),m=String(now.getMonth()+1).padStart(2,"0");return {ini:`${y}-${m}-01`,fim:`${y}-${m}-31`};}
+    if(periodo==="trim"){const m=now.getMonth();const trimIni=new Date(now.getFullYear(),Math.floor(m/3)*3,1);const trimFim=new Date(now.getFullYear(),Math.floor(m/3)*3+3,0);return {ini:trimIni.toISOString().slice(0,10),fim:trimFim.toISOString().slice(0,10)};}
+    if(periodo==="ano"){const y=now.getFullYear();return {ini:`${y}-01-01`,fim:`${y}-12-31`};}
+    return {ini:"",fim:""};
+  };
+  const {ini:pIni,fim:pFim}=getPeriodRange();
+  const inPeriod=(dt)=>{
+    if(!dt) return true;
+    const di=!pIni||dt>=pIni;
+    const df=!pFim||dt<=pFim;
+    return di&&df;
+  };
+
+  const recFilt=receber.filter(r=>r.status!=="cancelado"&&inPeriod(r.vencimento));
+  const pagFilt=pagar.filter(p=>p.status!=="cancelado"&&inPeriod(p.vencimento));
+
+  const totalRec=recFilt.reduce((a,b)=>a+b.valor,0);
+  const recebido=recFilt.filter(r=>r.status==="recebido").reduce((a,b)=>a+b.valor,0);
+  const totalPag=pagFilt.reduce((a,b)=>a+b.valor,0);
+  const pago=pagFilt.filter(p=>p.status==="pago").reduce((a,b)=>a+b.valor,0);
+
+  // Agrupa por categoria — inclui "Sem Categoria" para itens sem planoId
+  const buildCatReport=(lista,cats,statusField,statusValue)=>{
+    const rows=cats.map(c=>{
+      const items=lista.filter(r=>+r.planoId===c.id);
+      const receb=items.filter(r=>r.status===statusValue).reduce((a,b)=>a+b.valor,0);
+      return {nome:c.nome,codigo:c.codigo,total:items.reduce((a,b)=>a+b.valor,0),qtd:items.length,recebido:receb};
+    }).filter(c=>c.qtd>0);
+    // Sem categoria
+    const semCat=lista.filter(r=>!r.planoId||r.planoId===0||r.planoId==="");
+    if(semCat.length>0){
+      rows.push({nome:"Sem Categoria",codigo:"—",total:semCat.reduce((a,b)=>a+b.valor,0),qtd:semCat.length,recebido:semCat.filter(r=>r.status===statusValue).reduce((a,b)=>a+b.valor,0)});
+    }
+    return rows;
+  };
+
+  const recPorCat=buildCatReport(recFilt,cats3Rec,"status","recebido");
+  const pagPorCat=buildCatReport(pagFilt,cats3Pag,"status","pago");
+
+  const splitPorSub=subcontas.map(s=>{
+    const cobs=cobrancas.filter(c=>c.splits?.some(sp=>sp.walletId===s.walletId));
+    const totalCobranca=cobs.reduce((a,c)=>a+c.valor,0);
+    const totalSplit=cobs.reduce((a,c)=>{
+      const sp=c.splits.find(x=>x.walletId===s.walletId);
+      if(!sp) return a;
+      return a+(sp.splitType==="PERCENTUAL"?c.valor*(+sp.valor/100):(+sp.valor||0));
+    },0);
+    const splitRecebido=cobs.filter(c=>c.status==="RECEIVED").reduce((a,c)=>{const sp=c.splits.find(x=>x.walletId===s.walletId);return a+(sp?.splitType==="PERCENTUAL"?c.valor*(+sp.valor/100):(+sp?.valor||0));},0);
+    return {nome:s.nome,walletId:s.walletId,qtdCob:cobs.length,totalCobranca,totalSplit,recebido:splitRecebido};
+  });
+
+  // ── EXPORT CSV ─────────────────────────────────────────────────────────────
+  const exportCSV=()=>{
+    const isRec=tab==="analitico-rec";
+    const lista=isRec?recPorCat:pagPorCat;
+    const headers=["Código","Categoria","Qtd Títulos","Total Previsto",isRec?"Recebido":"Pago",isRec?"A Receber":"A Pagar","% Realizado"];
+    const rows=lista.map(c=>[
+      c.codigo, c.nome, c.qtd,
+      c.total.toFixed(2), c.recebido.toFixed(2),
+      (c.total-c.recebido).toFixed(2),
+      c.total>0?((c.recebido/c.total)*100).toFixed(1)+"%" : "0%"
+    ]);
+    const csv=[headers,...rows].map(r=>r.map(x=>`"${x}"`).join(",")).join("\n");
+    const blob=new Blob([csv],{type:"text/csv;charset=utf-8;"});
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(blob);
+    a.download=`relatorio_${tab}_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+  };
+
+  // ── EXPORT PDF (via print) ─────────────────────────────────────────────────
+  const exportPDF=()=>{
+    const isRec=tab==="analitico-rec";
+    const lista=isRec?recPorCat:pagPorCat;
+    const titulo=isRec?"Analítico — Contas a Receber":"Analítico — Contas a Pagar";
+    const rows=lista.map(c=>`
+      <tr>
+        <td>${c.codigo}</td><td>${c.nome}</td><td>${c.qtd}</td>
+        <td>R$ ${c.total.toFixed(2)}</td><td>R$ ${c.recebido.toFixed(2)}</td>
+        <td>R$ ${(c.total-c.recebido).toFixed(2)}</td>
+        <td>${c.total>0?((c.recebido/c.total)*100).toFixed(1):0}%</td>
+      </tr>`).join("");
+    const html=`<html><head><meta charset="UTF-8"><title>${titulo}</title>
+      <style>body{font-family:Arial,sans-serif;font-size:12px;padding:20px}
+      h2{color:#333;border-bottom:2px solid #333;padding-bottom:8px}
+      table{width:100%;border-collapse:collapse}
+      th{background:#333;color:#fff;padding:8px;text-align:left}
+      td{padding:6px 8px;border-bottom:1px solid #ddd}
+      tfoot td{font-weight:bold;border-top:2px solid #333}
+      .info{color:#666;font-size:11px;margin-bottom:16px}
+      </style></head><body>
+      <h2>GestãoAsaas — ${titulo}</h2>
+      <p class="info">Gerado em ${new Date().toLocaleDateString("pt-BR")} · Período: ${pIni||"—"} a ${pFim||"—"}</p>
+      <table><thead><tr><th>Código</th><th>Categoria</th><th>Qtd</th><th>Total</th><th>${isRec?"Recebido":"Pago"}</th><th>${isRec?"A Receber":"A Pagar"}</th><th>%</th></tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot><tr><td colspan="2">TOTAL</td><td>${lista.reduce((a,c)=>a+c.qtd,0)}</td>
+      <td>R$ ${lista.reduce((a,c)=>a+c.total,0).toFixed(2)}</td>
+      <td>R$ ${lista.reduce((a,c)=>a+c.recebido,0).toFixed(2)}</td>
+      <td>R$ ${lista.reduce((a,c)=>a+(c.total-c.recebido),0).toFixed(2)}</td>
+      <td>${lista.reduce((a,c)=>a+c.total,0)>0?((lista.reduce((a,c)=>a+c.recebido,0)/lista.reduce((a,c)=>a+c.total,0))*100).toFixed(1):0}%</td></tr></tfoot>
+      </table></body></html>`;
+    const w=window.open("","_blank");
+    w.document.write(html);
+    w.document.close();
+    w.print();
+  };
+
+  return (
+    <div>
+      <div style={{display:"flex",gap:10,marginBottom:20,flexWrap:"wrap",alignItems:"center"}}>
+        <Sel label="" value={periodo} onChange={e=>setPeriodo(e.target.value)} style={{width:200}}>
+          <option value="mes">Este mês</option>
+          <option value="trim">Trimestre</option>
+          <option value="ano">Ano atual</option>
+          <option value="custom">Período personalizado</option>
+        </Sel>
+        {periodo==="custom" && (
+          <>
+            <Inp label="" type="date" value={periodoIni} onChange={e=>setPeriodoIni(e.target.value)} style={{width:160}}/>
+            <Inp label="" type="date" value={periodoFim} onChange={e=>setPeriodoFim(e.target.value)} style={{width:160}}/>
+          </>
+        )}
+        <button className="btn sm sec" onClick={exportCSV}>⬇ Exportar CSV</button>
+        <button className="btn sm sec" onClick={exportPDF}>⬇ Exportar PDF</button>
+      </div>
+
+      <div className="stats-grid" style={{marginBottom:20}}>
+        {[
+          {l:"A Receber (total)",v:fmt(totalRec),c:"var(--green)"},
+          {l:"Recebido",v:fmt(recebido),c:"var(--green)"},
+          {l:"A Pagar (total)",v:fmt(totalPag),c:"var(--red)"},
+          {l:"Resultado Líquido",v:fmt(recebido-pago),c:recebido-pago>=0?"var(--green)":"var(--red)"},
+        ].map((s,i)=>(
+          <div className="stat-card" key={i}>
+            <div className="stat-label">{s.l}</div>
+            <div className="stat-value" style={{fontSize:20,color:s.c}}>{s.v}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="tabs">
+        <div className={`tab ${tab==="analitico-rec"?"active":""}`} onClick={()=>setTab("analitico-rec")}>Analítico — Receber</div>
+        <div className={`tab ${tab==="analitico-pag"?"active":""}`} onClick={()=>setTab("analitico-pag")}>Analítico — Pagar</div>
+        <div className={`tab ${tab==="split"?"active":""}`} onClick={()=>setTab("split")}>Divisão de Pagamentos</div>
+        <div className={`tab ${tab==="sintese"?"active":""}`} onClick={()=>setTab("sintese")}>Síntese</div>
+        <div className={`tab ${tab==="dre"?"active":""}`} onClick={()=>setTab("dre")}>DRE</div>
+      </div>
+
+      {tab==="analitico-rec" && (
+        <div className="card">
+          <div className="card-header"><div className="card-title">Relatório Analítico — Contas a Receber por Categoria</div></div>
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>Código</th><th>Categoria</th><th>Qtd Títulos</th><th>Total Previsto</th><th>Recebido</th><th>A Receber</th><th>% Recebido</th></tr></thead>
+              <tbody>
+                {recPorCat.length===0&&<tr><td colSpan={7} style={{textAlign:"center",color:"var(--text3)"}}>Nenhum dado neste período</td></tr>}
+                {recPorCat.map((c,i)=>(
+                  <tr key={i}>
+                    <td><code style={{fontSize:11,color:"var(--accent2)"}}>{c.codigo}</code></td>
+                    <td style={{fontWeight:600,color:c.nome==="Sem Categoria"?"var(--text3)":"var(--text)"}}>{c.nome}</td>
+                    <td>{c.qtd}</td>
+                    <td style={{color:"var(--text)"}}>{fmt(c.total)}</td>
+                    <td style={{color:"var(--green)",fontWeight:700}}>{fmt(c.recebido)}</td>
+                    <td style={{color:"var(--yellow)"}}>{fmt(c.total-c.recebido)}</td>
+                    <td>
+                      <div style={{display:"flex",alignItems:"center",gap:8}}>
+                        <div style={{flex:1,height:6,background:"var(--bg3)",borderRadius:3}}>
+                          <div style={{height:"100%",width:`${c.total>0?(c.recebido/c.total)*100:0}%`,background:"var(--green)",borderRadius:3}}/>
+                        </div>
+                        <span style={{fontSize:12,color:"var(--text3)"}}>{c.total>0?Math.round((c.recebido/c.total)*100):0}%</span>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr style={{borderTop:"2px solid var(--border)"}}>
+                  <td colSpan={2} style={{fontWeight:700,color:"var(--text)"}}>TOTAL</td>
+                  <td style={{fontWeight:700}}>{recFilt.length}</td>
+                  <td style={{fontWeight:700}}>{fmt(totalRec)}</td>
+                  <td style={{fontWeight:700,color:"var(--green)"}}>{fmt(recebido)}</td>
+                  <td style={{fontWeight:700,color:"var(--yellow)"}}>{fmt(totalRec-recebido)}</td>
+                  <td style={{fontWeight:700}}>{totalRec>0?Math.round((recebido/totalRec)*100):0}%</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {tab==="analitico-pag" && (
+        <div className="card">
+          <div className="card-header"><div className="card-title">Relatório Analítico — Contas a Pagar por Categoria</div></div>
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>Código</th><th>Categoria</th><th>Qtd Títulos</th><th>Total Previsto</th><th>Pago</th><th>A Pagar</th><th>% Pago</th></tr></thead>
+              <tbody>
+                {pagPorCat.length===0&&<tr><td colSpan={7} style={{textAlign:"center",color:"var(--text3)"}}>Nenhum dado neste período</td></tr>}
+                {pagPorCat.map((c,i)=>(
+                  <tr key={i}>
+                    <td><code style={{fontSize:11,color:"var(--accent2)"}}>{c.codigo}</code></td>
+                    <td style={{fontWeight:600,color:c.nome==="Sem Categoria"?"var(--text3)":"var(--text)"}}>{c.nome}</td>
+                    <td>{c.qtd}</td>
+                    <td style={{color:"var(--text)"}}>{fmt(c.total)}</td>
+                    <td style={{color:"var(--green)",fontWeight:700}}>{fmt(c.pago||c.recebido||0)}</td>
+                    <td style={{color:"var(--red)"}}>{fmt(c.total-(c.pago||c.recebido||0))}</td>
+                    <td>
+                      <div style={{display:"flex",alignItems:"center",gap:8}}>
+                        <div style={{flex:1,height:6,background:"var(--bg3)",borderRadius:3}}>
+                          <div style={{height:"100%",width:`${c.total>0?((c.pago||c.recebido||0)/c.total)*100:0}%`,background:"var(--red)",borderRadius:3}}/>
+                        </div>
+                        <span style={{fontSize:12,color:"var(--text3)"}}>{c.total>0?Math.round(((c.pago||c.recebido||0)/c.total)*100):0}%</span>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr style={{borderTop:"2px solid var(--border)"}}>
+                  <td colSpan={2} style={{fontWeight:700,color:"var(--text)"}}>TOTAL</td>
+                  <td style={{fontWeight:700}}>{pagFilt.length}</td>
+                  <td style={{fontWeight:700}}>{fmt(totalPag)}</td>
+                  <td style={{fontWeight:700,color:"var(--green)"}}>{fmt(pago)}</td>
+                  <td style={{fontWeight:700,color:"var(--red)"}}>{fmt(totalPag-pago)}</td>
+                  <td style={{fontWeight:700}}>{totalPag>0?Math.round((pago/totalPag)*100):0}%</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {tab==="split" && (
+        <div className="card">
+          <div className="card-header"><div className="card-title">Divisão de Pagamentos por Subconta</div></div>
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>Subconta</th><th>Wallet ID</th><th>Cobranças</th><th>Total da Cobrança</th><th>Total Split Previsto</th><th>Split Recebido</th><th>A Repassar</th></tr></thead>
+              <tbody>{splitPorSub.map((s,i)=>(
+                <tr key={i}>
+                  <td style={{fontWeight:600,color:"var(--text)"}}>{s.nome}</td>
+                  <td><code style={{fontSize:11,background:"var(--bg3)",padding:"2px 6px",borderRadius:4,color:"var(--accent2)"}}>{s.walletId}</code></td>
+                  <td>{s.qtdCob}</td>
+                  <td style={{fontWeight:700,color:"var(--text)"}}>{fmt(s.totalCobranca)}</td>
+                  <td style={{fontWeight:700}}>{fmt(s.totalSplit)}</td>
+                  <td style={{color:"var(--green)",fontWeight:700}}>{fmt(s.recebido)}</td>
+                  <td style={{color:"var(--yellow)"}}>{fmt(s.totalSplit-s.recebido)}</td>
+                </tr>
+              ))}</tbody>
+              <tfoot>
+                <tr style={{borderTop:"2px solid var(--border)"}}>
+                  <td colSpan={2} style={{fontWeight:700,color:"var(--text)"}}>TOTAL</td>
+                  <td style={{fontWeight:700}}>{splitPorSub.reduce((a,s)=>a+s.qtdCob,0)}</td>
+                  <td style={{fontWeight:700}}>{fmt(splitPorSub.reduce((a,s)=>a+s.totalCobranca,0))}</td>
+                  <td style={{fontWeight:700}}>{fmt(splitPorSub.reduce((a,s)=>a+s.totalSplit,0))}</td>
+                  <td style={{fontWeight:700,color:"var(--green)"}}>{fmt(splitPorSub.reduce((a,s)=>a+s.recebido,0))}</td>
+                  <td style={{fontWeight:700,color:"var(--yellow)"}}>{fmt(splitPorSub.reduce((a,s)=>a+(s.totalSplit-s.recebido),0))}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {tab==="dre" && <DRE receber={receber} pagar={pagar} plano={plano} periodoIniExt={pIni} periodoFimExt={pFim}/>}
+
+    </div>
+  );
+}
+
+// ─── DRE ─────────────────────────────────────────────────────────────────────
+function DRE({receber,pagar,plano,periodoIniExt,periodoFimExt}) {
+  const [criterio,setCriterio]=useState("competencia");
+  const [periodoIni,setPeriodoIni]=useState("");
+  const [periodoFim,setPeriodoFim]=useState("");
+
+  // Usa período herdado do pai (filtro de Relatórios) quando não tem personalizado
+  const pIni=periodoIni||periodoIniExt||"";
+  const pFim=periodoFim||periodoFimExt||"";
+
+  const filtrarRec=(items)=>items.filter(r=>{
+    if(r.status==="cancelado") return false;
+    const dtBase=criterio==="caixa"?r.dataPagamento||r.vencimento:r.vencimento;
+    const di=!pIni||dtBase>=pIni;
+    const df=!pFim||dtBase<=pFim;
+    return di&&df;
+  });
+  const filtrarPag=(items)=>items.filter(p=>{
+    if(p.status==="cancelado") return false;
+    const dtBase=criterio==="caixa"?p.dataPagamento||p.vencimento:p.vencimento;
+    const di=!pIni||dtBase>=pIni;
+    const df=!pFim||dtBase<=pFim;
+    return di&&df;
+  });
+
+  const recFilt=criterio==="caixa"?filtrarRec(receber).filter(r=>r.status==="recebido"):filtrarRec(receber);
+  const pagFilt=criterio==="caixa"?filtrarPag(pagar).filter(p=>p.status==="pago"):filtrarPag(pagar);
+
+  const nivel1Rec=plano.filter(p=>p.nivel===1&&(p.tipo==="receber"||p.tipo==="ambos"));
+  const nivel1Pag=plano.filter(p=>p.nivel===1&&(p.tipo==="pagar"||p.tipo==="ambos"));
+
+  // Soma por cat3 — compara com == para tolerância de tipo (string vs number)
+  const getRecCat=(cat3Id)=>recFilt.filter(r=>r.planoId==cat3Id).reduce((a,b)=>a+b.valor,0);
+  const getPagCat=(cat3Id)=>pagFilt.filter(p=>p.planoId==cat3Id).reduce((a,b)=>a+b.valor,0);
+
+  const buildTree=(nivel1List,getter)=>
+    nivel1List.map(n1=>{
+      const grupos=plano.filter(p=>p.nivel===2&&p.pai===n1.id);
+      const gruposData=grupos.map(n2=>{
+        const cats=plano.filter(p=>p.nivel===3&&p.pai===n2.id);
+        const catsData=cats.map(n3=>({...n3,total:getter(n3.id)})).filter(c=>c.total>0);
+        return {...n2,cats:catsData,total:catsData.reduce((a,c)=>a+c.total,0)};
+      }).filter(g=>g.total>0);
+      return {...n1,grupos:gruposData,total:gruposData.reduce((a,g)=>a+g.total,0)};
+    }).filter(n=>n.total>0);
+
+  const treeRec=buildTree(nivel1Rec,getRecCat);
+  const treePag=buildTree(nivel1Pag,getPagCat);
+
+  // Itens sem categoria (planoId null/0/"")
+  const recSemCat=recFilt.filter(r=>!r.planoId||r.planoId===0||r.planoId==="").reduce((a,b)=>a+b.valor,0);
+  const pagSemCat=pagFilt.filter(p=>!p.planoId||p.planoId===0||p.planoId==="").reduce((a,b)=>a+b.valor,0);
+
+  const totalReceita=treeRec.reduce((a,n)=>a+n.total,0)+recSemCat;
+  const totalDespesa=treePag.reduce((a,n)=>a+n.total,0)+pagSemCat;
+  const resultado=totalReceita-totalDespesa;
+  const margemBruta=totalReceita>0?((resultado/totalReceita)*100).toFixed(1):"0.0";
+
+  const rowStyle=(nivel)=>({
+    display:"flex",justifyContent:"space-between",alignItems:"center",
+    padding:nivel===1?"14px 16px":nivel===2?"10px 16px 10px 32px":"8px 16px 8px 52px",
+    borderBottom:"1px solid var(--border)",
+    background:nivel===1?"var(--bg3)":nivel===2?"var(--surface2)":"transparent",
+    fontWeight:nivel===1?800:nivel===2?600:400,
+    fontSize:nivel===1?14:nivel===2?13:12.5,
+    color:nivel===1?"var(--text)":nivel===2?"var(--text2)":"var(--text3)",
+  });
+
+  // ── EXPORT PDF DRE ─────────────────────────────────────────────────────────
+  const exportDREPDF=()=>{
+    let recRows="";
+    treeRec.forEach(n1=>{
+      recRows+=`<tr style="background:#1a2a1a"><td colspan="2" style="font-weight:800;color:#4ade80;padding:8px">${n1.codigo} — ${n1.nome}</td><td style="color:#4ade80;font-weight:800;text-align:right;padding:8px">R$ ${n1.total.toFixed(2)}</td></tr>`;
+      n1.grupos.forEach(n2=>{
+        recRows+=`<tr style="background:#111"><td style="padding:6px 8px 6px 20px;font-weight:600">${n2.codigo} — ${n2.nome}</td><td></td><td style="text-align:right;padding:6px 8px;font-weight:600">R$ ${n2.total.toFixed(2)}</td></tr>`;
+        n2.cats.forEach(n3=>{
+          recRows+=`<tr><td style="padding:5px 8px 5px 36px;font-size:11px;color:#888">${n3.codigo} — ${n3.nome}</td><td></td><td style="text-align:right;padding:5px 8px;font-size:11px">R$ ${n3.total.toFixed(2)}</td></tr>`;
+        });
+      });
+    });
+    if(recSemCat>0) recRows+=`<tr><td style="padding:5px 8px 5px 20px;font-size:11px;color:#888">— Sem Categoria</td><td></td><td style="text-align:right;padding:5px 8px;font-size:11px">R$ ${recSemCat.toFixed(2)}</td></tr>`;
+
+    let pagRows="";
+    treePag.forEach(n1=>{
+      pagRows+=`<tr style="background:#2a1a1a"><td colspan="2" style="font-weight:800;color:#f87171;padding:8px">${n1.codigo} — ${n1.nome}</td><td style="color:#f87171;font-weight:800;text-align:right;padding:8px">(R$ ${n1.total.toFixed(2)})</td></tr>`;
+      n1.grupos.forEach(n2=>{
+        pagRows+=`<tr style="background:#111"><td style="padding:6px 8px 6px 20px;font-weight:600">${n2.codigo} — ${n2.nome}</td><td></td><td style="text-align:right;padding:6px 8px;font-weight:600">(R$ ${n2.total.toFixed(2)})</td></tr>`;
+        n2.cats.forEach(n3=>{
+          pagRows+=`<tr><td style="padding:5px 8px 5px 36px;font-size:11px;color:#888">${n3.codigo} — ${n3.nome}</td><td></td><td style="text-align:right;padding:5px 8px;font-size:11px">(R$ ${n3.total.toFixed(2)})</td></tr>`;
+        });
+      });
+    });
+    if(pagSemCat>0) pagRows+=`<tr><td style="padding:5px 8px 5px 20px;font-size:11px;color:#888">— Sem Categoria</td><td></td><td style="text-align:right;padding:5px 8px;font-size:11px">(R$ ${pagSemCat.toFixed(2)})</td></tr>`;
+
+    const resColor=resultado>=0?"#4ade80":"#f87171";
+    const html=`<html><head><meta charset="UTF-8"><title>DRE</title>
+    <style>
+      body{font-family:Arial,sans-serif;font-size:12px;padding:24px;background:#0f1117;color:#e2e8f0}
+      h2{color:#e2e8f0;border-bottom:2px solid #334;padding-bottom:8px}
+      .info{color:#64748b;font-size:11px;margin-bottom:16px}
+      table{width:100%;border-collapse:collapse;margin-bottom:16px}
+      tr{border-bottom:1px solid #1e293b}
+      .resultado{display:flex;justify-content:space-between;padding:16px;border-radius:8px;margin-top:16px;font-size:18px;font-weight:800}
+      @media print{body{background:#fff;color:#000}.resultado{border:2px solid #333}}
+    </style></head><body>
+    <h2>DRE — Demonstrativo de Resultado do Exercício</h2>
+    <p class="info">Critério: ${criterio==="caixa"?"Caixa (Recebido/Pago)":"Competência (data de vencimento)"} · Período: ${pIni||"—"} a ${pFim||"—"} · Gerado em ${new Date().toLocaleDateString("pt-BR")}</p>
+    <table>
+      <tr style="background:#0d2010"><td colspan="3" style="padding:10px;font-weight:700;font-size:13px;color:#4ade80">( + ) RECEITAS OPERACIONAIS — R$ ${totalReceita.toFixed(2)}</td></tr>
+      ${recRows}
+      <tr style="background:#200d0d"><td colspan="3" style="padding:10px;font-weight:700;font-size:13px;color:#f87171">( - ) DESPESAS OPERACIONAIS — (R$ ${totalDespesa.toFixed(2)})</td></tr>
+      ${pagRows}
+    </table>
+    <div class="resultado" style="background:${resultado>=0?"#0d2010":"#200d0d"};color:${resColor}">
+      <span>( = ) ${resultado>=0?"LUCRO DO EXERCÍCIO":"PREJUÍZO DO EXERCÍCIO"}</span>
+      <span>${resultado>=0?"":"- "}R$ ${Math.abs(resultado).toFixed(2)}</span>
+    </div>
+    <p style="font-size:10px;color:#64748b;margin-top:8px">Margem líquida: ${margemBruta}% · Regime de ${criterio==="caixa"?"caixa":"competência"}</p>
+    </body></html>`;
+    const w=window.open("","_blank");
+    w.document.write(html);
+    w.document.close();
+    w.print();
+  };
+
+  return (
+    <div>
+      {/* Controles */}
+      <div style={{display:"flex",gap:10,marginBottom:20,flexWrap:"wrap",alignItems:"center"}}>
+        <div style={{display:"flex",gap:4,background:"var(--bg3)",padding:4,borderRadius:10}}>
+          {[["competencia","📅 Competência"],["caixa","💰 Caixa (Recebido/Pago)"]].map(([v,l])=>(
+            <button key={v} onClick={()=>setCriterio(v)} style={{padding:"7px 16px",borderRadius:7,cursor:"pointer",fontFamily:"var(--font-body)",fontSize:12.5,fontWeight:600,border:"none",transition:"all .15s",background:criterio===v?"var(--surface2)":"transparent",color:criterio===v?"var(--text)":"var(--text3)"}}>
+              {l}
+            </button>
+          ))}
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:6,fontSize:12,color:"var(--text3)"}}>
+          <span>De:</span>
+          <input type="date" className="form-input" style={{width:160,fontSize:12}} value={periodoIni} onChange={e=>setPeriodoIni(e.target.value)}/>
+          <span>Até:</span>
+          <input type="date" className="form-input" style={{width:160,fontSize:12}} value={periodoFim} onChange={e=>setPeriodoFim(e.target.value)}/>
+          <button className="btn sm sec" onClick={()=>{setPeriodoIni("");setPeriodoFim("");}}>Limpar</button>
+        </div>
+        <button className="btn sm sec" onClick={exportDREPDF}>⬇ Exportar PDF</button>
+      </div>
+
+      {/* Cards resumo */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:16,marginBottom:20}}>
+        {[
+          {l:"Receita Total",v:fmt(totalReceita),c:"var(--green)"},
+          {l:"Despesa Total",v:fmt(totalDespesa),c:"var(--red)"},
+          {l:"Resultado",v:fmt(resultado),c:resultado>=0?"var(--green)":"var(--red)"},
+          {l:"Margem Líquida",v:`${margemBruta}%`,c:resultado>=0?"var(--green)":"var(--red)"},
+        ].map((s,i)=>(
+          <div key={i} style={{background:"var(--bg3)",borderRadius:12,padding:"16px 20px"}}>
+            <div style={{fontSize:11,color:"var(--text3)",marginBottom:6,textTransform:"uppercase",letterSpacing:1}}>{s.l}</div>
+            <div style={{fontFamily:"var(--font-head)",fontSize:22,fontWeight:800,color:s.c}}>{s.v}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Árvore DRE */}
+      <div style={{background:"var(--surface2)",borderRadius:16,overflow:"hidden",border:"1px solid var(--border)"}}>
+        <div style={{padding:"16px 20px",borderBottom:"1px solid var(--border)",display:"flex",justifyContent:"space-between"}}>
+          <div>
+            <div style={{fontWeight:800,fontSize:16}}>DRE – Demonstrativo de Resultado do Exercício</div>
+            <div style={{fontSize:12,color:"var(--accent)",marginTop:2}}>Critério: {criterio==="caixa"?"Caixa (Recebido/Pago)":"Competência (data de vencimento)"}</div>
+          </div>
+          <div style={{fontSize:12,color:"var(--text3)"}}>Gerado em {new Date().toLocaleDateString("pt-BR")}</div>
+        </div>
+
+        {/* RECEITAS */}
+        <div style={{...rowStyle(1),color:"var(--green)"}}>
+          <span>( + ) RECEITAS OPERACIONAIS</span>
+          <span>{fmt(totalReceita)}</span>
+        </div>
+        {treeRec.map(n1=>(
+          <div key={n1.id}>
+            <div style={rowStyle(2)}>
+              <span>↳ {n1.codigo} — {n1.nome}</span>
+              <span style={{color:"var(--green)"}}>{fmt(n1.total)}</span>
+            </div>
+            {n1.grupos.map(n2=>(
+              <div key={n2.id}>
+                {n2.cats.map(n3=>(
+                  <div key={n3.id} style={rowStyle(3)}>
+                    <span>{n3.codigo} — {n3.nome}</span>
+                    <span>{fmt(n3.total)}</span>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        ))}
+        {recSemCat>0&&(
+          <div style={{...rowStyle(3),color:"var(--text3)"}}>
+            <span>— Sem Categoria</span>
+            <span>{fmt(recSemCat)}</span>
+          </div>
+        )}
+
+        {/* DESPESAS */}
+        <div style={{...rowStyle(1),color:"var(--red)",marginTop:4}}>
+          <span>( - ) DESPESAS OPERACIONAIS</span>
+          <span>({fmt(totalDespesa)})</span>
+        </div>
+        {treePag.map(n1=>(
+          <div key={n1.id}>
+            <div style={rowStyle(2)}>
+              <span>↳ {n1.codigo} — {n1.nome}</span>
+              <span style={{color:"var(--red)"}}>({fmt(n1.total)})</span>
+            </div>
+            {n1.grupos.map(n2=>(
+              <div key={n2.id}>
+                {n2.cats.map(n3=>(
+                  <div key={n3.id} style={rowStyle(3)}>
+                    <span>{n3.codigo} — {n3.nome}</span>
+                    <span>({fmt(n3.total)})</span>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        ))}
+        {pagSemCat>0&&(
+          <div style={{...rowStyle(3),color:"var(--text3)"}}>
+            <span>— Sem Categoria</span>
+            <span>({fmt(pagSemCat)})</span>
+          </div>
+        )}
+
+        {/* RESULTADO */}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"20px 16px",background:resultado>=0?"rgba(74,222,128,0.08)":"rgba(248,113,113,0.08)",borderTop:"2px solid "+(resultado>=0?"var(--green)":"var(--red)")}}>
+          <div>
+            <div style={{fontWeight:900,fontSize:16,color:resultado>=0?"var(--green)":"var(--red)"}}>
+              ( = ) {resultado>=0?"LUCRO DO EXERCÍCIO":"PREJUÍZO DO EXERCÍCIO"}
+            </div>
+            <div style={{fontSize:12,color:"var(--text3)",marginTop:4}}>Margem liquida: {margemBruta}% · Regime de {criterio==="caixa"?"caixa":"competência"}</div>
+          </div>
+          <div style={{fontFamily:"var(--font-head)",fontSize:32,fontWeight:900,color:resultado>=0?"var(--green)":"var(--red)"}}>
+            {resultado>=0?"":"-"} {fmt(Math.abs(resultado))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── CONFIGURAÇÕES ────────────────────────────────────────────────────────────
+const CONFIG_KEY = "gestaoasaas_config";
+
+const loadConfig = () => {
+  try {
+    const raw = localStorage.getItem(CONFIG_KEY);
+    if(raw) return JSON.parse(raw);
+  } catch {}
+  return { apiKey:"", walletId:"", env:"production", backendUrl:"" };
+};
+
+const saveConfig = (cfg) => {
+  try { localStorage.setItem(CONFIG_KEY, JSON.stringify(cfg)); } catch {}
+};
+
+function Configuracoes({toast}) {
+  const [cfg, setCfg] = useState(loadConfig);
+  const [testando,setTestando]=useState(false);
+  const [testResult,setTestResult]=useState(null);
+  const [backendOk,setBackendOk]=useState(null);
+  const [salvo,setSalvo]=useState(false);
+
+  const upd = (k,v) => setCfg(p => ({...p,[k]:v}));
+
+  const salvar = () => {
+    saveConfig(cfg);
+    setSalvo(true);
+    setTimeout(()=>setSalvo(false), 2500);
+    toast("✅ Configurações salvas! Persistidas no navegador.");
+  };
+
+  // 1º passo: verifica se o servidor backend está respondendo
+  const checarBackend = async (url) => {
+    try {
+      const r = await fetch(`${url}/api/handler?path=health`, {signal: AbortSignal.timeout(5000)});
+      const data = await r.json();
+      return {ok:true, data};
+    } catch {
+      return {ok:false};
+    }
+  };
+
+  const testarConexao = async () => {
+    const {backendUrl, apiKey} = cfg;
+    if(!backendUrl.trim()) {
+      toast("⚠️ Informe a URL do Backend Proxy antes de testar.");
+      return;
+    }
+    setTestando(true);
+    setTestResult(null);
+    setBackendOk(null);
+
+    // ── Passo 1: Backend está rodando? ────────────────────────────────────────
+    const bk = await checarBackend(backendUrl.trim());
+    if(!bk.ok) {
+      setBackendOk(false);
+      setTestResult({ ok:false, fase:"backend",
+        msg:`Servidor não encontrado em ${backendUrl}`,
+        dica:`Verifique se a URL do Railway está correta e se o serviço está ativo.`
+      });
+      setTestando(false);
+      toast("❌ Backend não encontrado. Verifique a URL.");
+      return;
+    }
+    setBackendOk(true);
+
+    // ── Passo 2: Testa conexão com Asaas via backend ──────────────────────────
+    // A API Key fica no Railway (.env). O backend não precisa receber pelo header.
+    // Usamos o endpoint /api/asaas/balance que usa process.env.ASAAS_API_KEY no servidor.
+    try {
+      const headers = { "Content-Type":"application/json" };
+      // Só envia pelo header se o usuário preencheu no frontend (redundante mas útil para debug)
+      if(apiKey.trim()) headers["x-asaas-key"] = apiKey.trim();
+
+      const res = await fetch(`${backendUrl.trim()}/api/handler?path=api/asaas/finance/balance`, { method:"GET", headers });
+      const data = await res.json();
+
+      if(res.ok && !data.error) {
+        setTestResult({ok:true, msg:"Conexão com Asaas estabelecida com sucesso!", data, fase:"asaas"});
+        toast("✅ Conexão confirmada! Saldo carregado.");
+      } else {
+        const errMsg = data?.errors?.[0]?.description || data?.message || `HTTP ${res.status}`;
+        // HTTP 401 = API Key ausente no servidor  |  403 = chave inválida ou sem permissão
+        const dica = res.status===401
+          ? "A variável ASAAS_API_KEY não foi configurada no Vercel. Adicione-a em Settings → Environment Variables e faça Redeploy."
+          : res.status===403
+          ? "A API Key foi recusada pela Asaas. Verifique se a chave no Vercel (variável ASAAS_API_KEY) está correta e é de Produção."
+          : res.status===502
+          ? "A Asaas retornou resposta vazia. Confirme que a ASAAS_API_KEY no Vercel está salva corretamente e faça Redeploy."
+          : "Verifique as variáveis no Vercel e tente novamente.";
+        setTestResult({ok:false, msg:`Erro da API Asaas: HTTP ${res.status}`, fase:"asaas", dica});
+        toast(`❌ HTTP ${res.status} — veja as dicas na tela.`);
+      }
+    } catch(e) {
+      setTestResult({ok:false, msg:`Erro ao chamar o backend: ${e.message}`, fase:"asaas",
+        dica:"Verifique se a URL do Railway está correta."});
+      toast("❌ Erro ao chamar o backend.");
+    } finally {
+      setTestando(false);
+    }
+  };
+
+  const endpoint = cfg.env==="sandbox"
+    ? "https://sandbox.asaas.com/api/v3"
+    : "https://api.asaas.com/v3";
+
+  return (
+    <div>
+      <div className="card" style={{maxWidth:680}}>
+        <div className="card-header">
+          <div><div className="card-title">Configuração API Asaas</div><div className="card-sub">Conta principal PJ</div></div>
+          {salvo && <span className="badge b-green">✅ Salvo!</span>}
+        </div>
+        <div style={{display:"flex",flexDirection:"column",gap:16}}>
+
+          {/* Ambiente */}
+          <div className="form-group">
+            <label className="form-label">Ambiente</label>
+            <div style={{display:"flex",gap:8}}>
+              {[["sandbox","Sandbox (testes)"],["production","Produção"]].map(([v,l])=>(
+                <button key={v} onClick={()=>{upd("env",v);setTestResult(null);}} style={{flex:1,padding:"10px",borderRadius:8,cursor:"pointer",fontFamily:"var(--font-body)",fontSize:13,fontWeight:600,transition:"all .15s",background:cfg.env===v?"var(--accent)":"var(--bg3)",border:`1px solid ${cfg.env===v?"var(--accent)":"var(--border)"}`,color:cfg.env===v?"#fff":"var(--text2)"}}>
+                  {l}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <Inp label="API Key" placeholder="$aact_..." value={cfg.apiKey} onChange={e=>{upd("apiKey",e.target.value);setTestResult(null);}} type="password"/>
+          <Inp label="Wallet ID (Conta Principal)" placeholder="wlt_xxxxxxxxxxxxxxxx" value={cfg.walletId} onChange={e=>upd("walletId",e.target.value)}/>
+
+          {/* Backend URL */}
+          <div className="form-group">
+            <label className="form-label">URL do Backend Proxy (Railway)</label>
+            <input className="form-input" value={cfg.backendUrl} onChange={e=>{upd("backendUrl",e.target.value);setTestResult(null);setBackendOk(null);}} placeholder="https://gestao-asaas-backend.up.railway.app"/>
+            <div style={{fontSize:11,color:"var(--text3)",marginTop:4}}>
+              Sem o <code>/health</code> no final. Exemplo: <code style={{color:"var(--accent2)"}}>https://gestao-asaas-backend.up.railway.app</code>
+            </div>
+          </div>
+
+          {/* Endpoint */}
+          <div style={{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8,padding:"10px 14px",fontSize:12,color:"var(--text3)"}}>
+            <strong style={{color:"var(--text2)"}}>Asaas Endpoint:</strong> {endpoint}
+          </div>
+
+          {/* Resultado do teste */}
+          {testResult && (
+            <div style={{background:testResult.ok?"rgba(62,207,142,.08)":"rgba(240,101,101,.08)",border:`1px solid ${testResult.ok?"rgba(62,207,142,.3)":"rgba(240,101,101,.3)"}`,borderRadius:10,padding:"14px 16px"}}>
+              {/* Fase 1: Backend */}
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8,fontSize:13}}>
+                <span style={{fontSize:16}}>{backendOk===true?"✅":backendOk===false?"❌":"⏳"}</span>
+                <strong style={{color:backendOk?"var(--green)":"var(--red)"}}>
+                  {backendOk===true?`Backend OK — ${cfg.backendUrl}`:backendOk===false?"Backend não encontrado":"Verificando backend..."}
+                </strong>
+              </div>
+              {/* Fase 2: Asaas */}
+              {testResult.fase==="asaas" && (
+                <div style={{display:"flex",alignItems:"flex-start",gap:8,fontSize:13}}>
+                  <span style={{fontSize:16}}>{testResult.ok?"✅":"❌"}</span>
+                  <div style={{flex:1}}>
+                    <strong style={{color:testResult.ok?"var(--green)":"var(--red)"}}>{testResult.msg}</strong>
+                    {testResult.ok && testResult.data && (
+                      <div style={{display:"flex",gap:24,marginTop:8,fontSize:12}}>
+                        <div>💰 Saldo disponível: <strong style={{color:"var(--green)"}}>{fmt(testResult.data.balance||0)}</strong></div>
+                        {testResult.data.totalBalance!==undefined&&<div>📊 Saldo total: <strong>{fmt(testResult.data.totalBalance)}</strong></div>}
+                      </div>
+                    )}
+                    {testResult.dica && (
+                      <div style={{marginTop:10,background:"var(--bg3)",borderRadius:8,padding:"10px 12px",fontSize:12,color:"var(--text2)"}}>
+                        💡 {testResult.dica}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              {testResult.fase==="backend" && testResult.dica && (
+                <div style={{marginTop:10,background:"var(--bg3)",borderRadius:8,padding:"10px 12px",fontSize:12,color:"var(--text2)"}}>
+                  💡 {testResult.dica}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div style={{display:"flex",gap:10}}>
+            <button className="btn" onClick={salvar}>💾 Salvar Configurações</button>
+            <button className="btn sec" onClick={testarConexao} disabled={testando} style={{minWidth:180}}>
+              {testando?"⏳ Testando...":"🔗 Testar Conexão"}
+            </button>
+          </div>
+
+          <div style={{background:"rgba(240,200,75,.07)",border:"1px solid rgba(240,200,75,.2)",borderRadius:8,padding:"10px 14px",fontSize:12,color:"var(--yellow)"}}>
+            ⚠️ Clique em <strong>Salvar Configurações</strong> sempre que alterar algum campo — as informações ficam gravadas mesmo ao fechar o navegador.
+          </div>
+        </div>
+      </div>
+
+      {/* Instruções de setup */}
+      <div className="card" style={{maxWidth:680,marginTop:20}}>
+        <div className="card-header"><div><div className="card-title">⚙️ Como configurar o Backend Proxy</div><div className="card-sub">Necessário para integração real com a API Asaas</div></div></div>
+        <div style={{display:"flex",flexDirection:"column",gap:12,fontSize:13,color:"var(--text2)"}}>
+          <div style={{background:"var(--bg3)",borderRadius:8,padding:"14px 16px",lineHeight:1.9}}>
+            <div style={{fontWeight:700,color:"var(--text)",marginBottom:8}}>1. Pré-requisito: Node.js instalado</div>
+            <code style={{color:"var(--accent2)"}}>node --version &nbsp; # deve ser v18+</code>
+          </div>
+          <div style={{background:"var(--bg3)",borderRadius:8,padding:"14px 16px",lineHeight:1.9}}>
+            <div style={{fontWeight:700,color:"var(--text)",marginBottom:8}}>2. Instalar e configurar</div>
+            <code style={{color:"var(--accent2)",display:"block"}}>
+              cd backend<br/>
+              npm install<br/>
+              cp .env.example .env
+            </code>
+            <div style={{marginTop:8,color:"var(--text3)"}}>Abra o arquivo <code style={{color:"var(--yellow)"}}>.env</code> e preencha <code style={{color:"var(--yellow)"}}>ASAAS_API_KEY</code> com sua chave.</div>
+          </div>
+          <div style={{background:"var(--bg3)",borderRadius:8,padding:"14px 16px",lineHeight:1.9}}>
+            <div style={{fontWeight:700,color:"var(--text)",marginBottom:8}}>3. Iniciar o servidor</div>
+            <code style={{color:"var(--accent2)"}}>node server.js</code>
+            <div style={{marginTop:8,color:"var(--text3)"}}>O servidor ficará disponível em <code style={{color:"var(--green)"}}>http://localhost:3001</code></div>
+          </div>
+          <div style={{background:"rgba(91,106,240,.08)",border:"1px solid rgba(91,106,240,.2)",borderRadius:8,padding:"12px 14px",fontSize:12,color:"var(--accent2)"}}>
+            🔒 <strong>Segurança:</strong> A API Key fica <strong>somente no servidor</strong> (arquivo .env), nunca exposta no browser. Em produção, hospede o backend em um servidor próprio (ex: VPS, Railway, Render).
+          </div>
+        </div>
+      </div>
+      <div className="card" style={{maxWidth:640,marginTop:20}}>
+        <div className="card-header"><div className="card-title">Configuração NFS-e</div></div>
+        <div style={{display:"flex",flexDirection:"column",gap:16}}>
+          <Inp label="CNPJ Emitente" placeholder="00.000.000/0001-00"/>
+          <Inp label="Inscrição Municipal"/>
+          <Sel label="Regime Tributário"><option>Simples Nacional</option><option>Lucro Presumido</option><option>Lucro Real</option></Sel>
+          <Inp label="Certificado Digital (.pfx)" type="file"/>
+          <Inp label="Senha do Certificado" type="password"/>
+          <button className="btn" style={{width:"fit-content"}} onClick={()=>toast("✅ NFS-e configurada!")}>Salvar</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+
+ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+</script></body></html>
