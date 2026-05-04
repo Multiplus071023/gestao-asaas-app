@@ -1506,6 +1506,64 @@ const cats3RecRaw=plano.filter(p=>p.nivel===3&&(p.tipo==="receber"||p.tipo==="am
     setSincStatus(false);
   };
 
+  const [importando,setImportando]=useState(false);
+  const importarFaltantes=async()=>{
+    if(!apiIntegrado){toast("⚠️ Configure a API primeiro");return;}
+    setImportando(true);
+    try {
+      let offset=0; const limit=100; let todas=[];
+      while(true){
+        const res=await callApi("GET",`/payments?limit=${limit}&offset=${offset}&sort=dateCreated&order=desc`);
+        if(!res||!res.data) break;
+        todas=[...todas,...res.data];
+        if(res.data.length<limit||todas.length>=200) break;
+        offset+=limit;
+      }
+      const _cobs=stateRef.current.cobrancas||cobrancas||[];
+      const _rec=stateRef.current.receber||receber||[];
+      const _pag=stateRef.current.pagar||pagar||[];
+      const idsExist=new Set(_cobs.map(c=>c.asaasId||c.id).filter(Boolean));
+      const faltantes=todas.filter(c=>!idsExist.has(c.id));
+      if(!faltantes.length){toast(`✅ Tudo sincronizado (${todas.length} verificadas)`);setImportando(false);return;}
+      const novasCobs=[..._cobs];
+      const novoRec=[..._rec];
+      const novoPag=[..._pag];
+      for(const c of faltantes){
+        const cl=clientes.find(x=>x.asaasId===c.customer||x.nome===c.customerName);
+        let splits=[];
+        try{const det=await callApi("GET",`/payments/${c.id}`);if(det?.split?.length>0)splits=det.split;}catch(e){}
+        novasCobs.push({id:c.id,asaasId:c.id,cliente:c.customerName||cl?.nome||"",clienteId:cl?.id||null,
+          descricao:c.description||"",valor:+c.value||0,vencimento:c.dueDate||"",tipo:c.billingType||"",
+          status:c.status||"PENDING",link:c.invoiceUrl||c.bankSlipUrl||"",
+          criadoEm:c.dateCreated||new Date().toISOString().slice(0,10),parcelas:c.installmentCount||1,splits,_importado:true});
+        novoRec.push({id:Date.now()+novoRec.length,
+          descricao:c.description||`Cobrança — ${c.customerName||""}`,
+          cliente:c.customerName||cl?.nome||"",clienteId:cl?.id||null,valor:+c.value||0,
+          vencimento:c.dueDate||"",status:(c.status==="RECEIVED"||c.status==="CONFIRMED")?"recebido":"pendente",
+          dataPagamento:c.clientPaymentDate||c.paymentDate||null,contaBancariaId:-1,asaasId:c.id});
+        splits.filter(s=>s.walletId).forEach((s,idx)=>{
+          const valorSplit=+(s.splitType==="FIXED"?+(s.fixedValue||0):(+c.value)*(+(s.percentualValue||0)/100)).toFixed(2);
+          const sub=subcontas.find(x=>x.walletId===s.walletId);
+          novoPag.push({id:Date.now()+novoPag.length*3+idx,
+            descricao:`Split — ${sub?.nome||s.walletId} (${c.description||c.customerName||""})`,
+            fornecedor:sub?.nome||s.walletId,valor:valorSplit,vencimento:c.dueDate||"",
+            status:(c.status==="RECEIVED"||c.status==="CONFIRMED")?"pago":"pendente",
+            dataPagamento:(c.status==="RECEIVED"||c.status==="CONFIRMED")?(c.clientPaymentDate||c.paymentDate||null):null,
+            asaasId:c.id,_splitIdx:idx,criadoEm:c.dateCreated||new Date().toISOString().slice(0,10)});
+        });
+      }
+      window._fbWriteLock=true;
+      lsSet("cobrancas",novasCobs); setCobrancasRaw(novasCobs);
+      lsSet("receber",novoRec);     setReceberRaw(novoRec);
+      lsSet("pagar",novoPag);       setPagarRaw(novoPag);
+      stateRef.current={...stateRef.current,cobrancas:novasCobs,receber:novoRec,pagar:novoPag};
+      await fbWriteMulti(dbRef.current,{cobrancas:novasCobs,receber:novoRec,pagar:novoPag});
+      window._fbWriteLock=false;
+      toast(`✅ ${faltantes.length} cobrança(s) importada(s) + A Receber e A Pagar gerados!`);
+    }catch(e){window._fbWriteLock=false;toast("❌ Erro: "+e.message);}
+    setImportando(false);
+  };
+
   const [confirmDel,setConfirmDel]=useState(null);
   const excluirCobranca=async(cob)=>{
     if(apiIntegrado&&cob.asaasId) {
@@ -1789,6 +1847,7 @@ const cats3RecRaw=plano.filter(p=>p.nivel===3&&(p.tipo==="receber"||p.tipo==="am
           <div><div className="card-title">Cobranças</div><div className="card-sub">{cobrancas.length} registros</div></div>
           <div style={{display:"flex",gap:8}}>
             {apiIntegrado&&<button className="btn sec" onClick={sincronizarStatus} disabled={sincStatus}>{sincStatus?"🔄 Sincronizando...":"🔄 Sincronizar Status"}</button>}
+            {apiIntegrado&&<button className="btn sec" style={{color:"var(--accent2)"}} onClick={importarFaltantes} disabled={importando}>{importando?"⏳ Importando...":"📥 Importar faltantes"}</button>}
             <button className="btn" onClick={openNew}>+ Nova Cobrança</button>
           </div>
         </div>
@@ -3381,10 +3440,40 @@ body{font-family:Arial,sans-serif;font-size:10px;background:#fff;color:#000;padd
             <button className="btn" onClick={()=>setModal(true)}>📄 Emitir NFS-e</button>
           </div>
         </div>
-        <div className="table-wrap">
-          <table>
-            <thead><tr><th>Número</th><th>Tomador</th><th>CNAE</th><th>Competência</th><th>Valor</th><th>ISS</th><th>Status</th><th>Ações</th></tr></thead>
-            <tbody>{notas.map(n=>(
+        {/* Filtro de data de emissão */}
+        {(()=>{
+          const [fNfIni,setFNfIni]=React.useState("");
+          const [fNfFim,setFNfFim]=React.useState("");
+          const [fNfTomador,setFNfTomador]=React.useState("");
+          const notasFiltradas=[...notas]
+            .filter(n=>{
+              const dt=n.emitidaEm||n.competencia||"";
+              if(fNfIni&&dt&&dt<fNfIni) return false;
+              if(fNfFim&&dt&&dt>fNfFim) return false;
+              if(fNfTomador&&!(n.tomador||"").toLowerCase().includes(fNfTomador.toLowerCase())) return false;
+              return true;
+            })
+            .sort((a,b)=>{
+              const da=a.emitidaEm||a.competencia||"";
+              const db2=b.emitidaEm||b.competencia||"";
+              return db2.localeCompare(da); // mais recentes primeiro
+            });
+          return (<>
+            <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"center",padding:"10px 0 12px 0",borderBottom:"1px solid var(--border)",marginBottom:12}}>
+              <span style={{fontSize:12,color:"var(--text3)",fontWeight:600}}>📅 Emissão:</span>
+              <input type="date" className="form-input" style={{height:32,width:140,fontSize:12}} value={fNfIni} onChange={e=>setFNfIni(e.target.value)}/>
+              <span style={{fontSize:11,color:"var(--text3)"}}>até</span>
+              <input type="date" className="form-input" style={{height:32,width:140,fontSize:12}} value={fNfFim} onChange={e=>setFNfFim(e.target.value)}/>
+              <input type="text" className="form-input" style={{height:32,width:180,fontSize:12}} placeholder="🔍 Tomador..." value={fNfTomador} onChange={e=>setFNfTomador(e.target.value)}/>
+              {(fNfIni||fNfFim||fNfTomador)&&<button className="btn sm sec" onClick={()=>{setFNfIni("");setFNfFim("");setFNfTomador("");}}>✕ Limpar</button>}
+              <span style={{fontSize:12,color:"var(--text3)",marginLeft:"auto"}}>{notasFiltradas.length} nota(s)</span>
+            </div>
+            <div className="table-wrap" style={{maxHeight:520,overflowY:"auto"}}>
+              <table style={{minWidth:800}}>
+                <thead style={{position:"sticky",top:0,background:"var(--bg2)",zIndex:2}}>
+                  <tr><th>Número</th><th>Tomador</th><th>CNAE</th><th>Competência</th><th>Valor</th><th>ISS</th><th>Status</th><th>Ações</th></tr>
+                </thead>
+                <tbody>{notasFiltradas.map(n=>(
               <tr key={n.id}>
                 <td style={{fontFamily:"monospace",color:"var(--accent2)"}}>
                   <div>{n.numero||n.id}</div>
@@ -3402,7 +3491,6 @@ body{font-family:Arial,sans-serif;font-size:10px;background:#fff;color:#000;padd
                   <div style={{fontSize:10,color:n.issRetido?"var(--red)":"var(--green)",fontWeight:600}}>{n.retencaoISS||"TI"}</div>
                 </td>
                 <td>
-                  {/* Status badge + change button */}
                   <div style={{display:"flex",flexDirection:"column",gap:4,alignItems:"flex-start"}}>
                     <StatusBadge s={n.status==="EMITIDA"?"recebido":n.status==="PROCESSANDO"?"PENDING":"cancelado"}/>
                     {n.sincPortal&&<div style={{fontSize:10,color:"var(--text3)"}}>Sinc: {n.sincPortal}</div>}
@@ -3540,8 +3628,10 @@ body{font-family:Arial,sans-serif;font-size:10px;background:#fff;color:#000}
                 </td>
               </tr>
             ))}</tbody>
-          </table>
-        </div>
+              </table>
+            </div>
+          </>);
+        })()}
       </div>
     </div>
   );
@@ -5197,6 +5287,75 @@ function Configuracoes({toast,clientes,setClientes,terapeutas,setTerapeutas,subc
   const [backendOk,setBackendOk]=useState(null);
   const [salvo,setSalvo]=useState(false);
   const [migConfirm,setMigConfirm]=useState(false);
+  const [migStatus,setMigStatus]=useState("");
+  const [migDiag,setMigDiag]=useState(null);
+
+  const diagnosticarMigracao=()=>{
+    const _cobLocais=cobLocais||[];
+    const _receber=receber||[];
+    const _pagar=pagar||[];
+    const todas=_cobLocais.map(c=>{
+      const splitsValidos=(c.splits||[]).filter(s=>s.subcontaId&&+s.valor>0);
+      const totalSplits=splitsValidos.reduce((acc,s)=>acc+(s.tipo==="FIXED"?+s.valor:(+c.valor)*(+s.valor/100)),0);
+      const recAtual=_receber.find(r=>String(r.cobLocalId)===String(c.id));
+      const pagExist=_pagar.filter(p=>String(p.cobLocalId)===String(c.id));
+      return {
+        cob:c,splitsCount:splitsValidos.length,
+        totalSplits:+totalSplits.toFixed(2),
+        valorIntegral:+c.valor,
+        recAtualValor:recAtual?.valor,
+        recNeedsCorrection:recAtual&&Math.abs((recAtual.valor||0)-(+c.valor))>0.01,
+        pagExistentes:pagExist.length,
+        pagFaltando:splitsValidos.length-pagExist.length,
+      };
+    }).filter(d=>d.splitsCount>0||d.recNeedsCorrection);
+    setMigDiag(todas);
+  };
+
+  const executarMigracao=async()=>{
+    const _cobLocais=cobLocais||[];
+    const _receber=receber||[];
+    const _pagar=pagar||[];
+    const cobById=Object.fromEntries(_cobLocais.map(c=>[String(c.id),c]));
+    let recCorrigidos=0;
+    const novoReceber=_receber.map(r=>{
+      if(!r.cobLocalId) return r;
+      const cob=cobById[String(r.cobLocalId)];
+      if(!cob) return r;
+      if(Math.abs((r.valor||0)-(+cob.valor))<0.01) return r;
+      recCorrigidos++;
+      return {...r,valor:+cob.valor,valorTotal:+cob.valor};
+    });
+    const novoPagar=_pagar.filter(p=>!p.cobLocalId);
+    const pagRemovidos=_pagar.length-novoPagar.length;
+    const novosPagar=[];
+    _cobLocais.forEach(c=>{
+      const splitsValidos=(c.splits||[]).filter(s=>s.subcontaId&&+s.valor>0);
+      splitsValidos.forEach((s,idx)=>{
+        const valorSplit=+(s.tipo==="FIXED"?+s.valor:(+c.valor)*(+s.valor/100)).toFixed(2);
+        const _sa=(subcontas||[]).find(x=>x.id===+s.subcontaId);
+        const benef=_sa?.nome||`Split ${idx+1}`;
+        novosPagar.push({
+          id:Date.now()+novosPagar.length*3+1,
+          descricao:`Split — ${benef} (${c.descricao||c.cliente})`,
+          observacao:`Referente à cobrança de ${c.cliente}`,
+          fornecedor:benef,valor:valorSplit,vencimento:c.vencimento,
+          status:c.status==="RECEIVED"?"pago":"pendente",
+          dataPagamento:c.status==="RECEIVED"?(c.dataPagamento||null):null,
+          cobLocalId:c.id,_splitIdx:idx,
+          criadoEm:c.criadoEm||new Date().toISOString().slice(0,10),
+        });
+      });
+    });
+    const novoPagarFinal=[...novoPagar,...novosPagar];
+    window._fbWriteLock=true;
+    lsSet("receber",novoReceber); setReceberRaw(novoReceber);
+    lsSet("pagar",novoPagarFinal); setPagarRaw(novoPagarFinal);
+    await fbWriteMulti(dbRef?.current,{receber:novoReceber,pagar:novoPagarFinal});
+    window._fbWriteLock=false;
+    const msg=`✅ ${recCorrigidos} A Receber corrigido(s) · ${pagRemovidos} A Pagar removido(s) · ${novosPagar.length} A Pagar de split gerado(s)`;
+    setMigStatus(msg);setMigConfirm(false);setMigDiag(null);toast(msg);
+  };
 
   const upd=(k,v)=>setCfg(p=>({...p,[k]:v}));
   const salvar=()=>{
