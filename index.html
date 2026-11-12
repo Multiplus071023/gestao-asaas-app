@@ -1557,7 +1557,20 @@ function Clientes({clientes,setClientes,cobrancas,apiIntegrado,callApi,toast}) {
     if(sortCol===col) setSortDir(d=>d==="asc"?"desc":"asc");
     else { setSortCol(col); setSortDir("asc"); }
   };
-  const emptyForm={nome:"",cpf:"",email:"",telefone:"",nomeAluno:"",cep:"",endereco:"",bairro:"",cidade:"",estado:"SP",codigoMunicipio:"",status:"ativo",bloqueado:false};
+  const emptyForm={nome:"",cpf:"",email:"",telefone:"",nomeAluno:"",cep:"",endereco:"",numero:"",complemento:"",bairro:"",cidade:"",estado:"SP",codigoMunicipio:"",status:"ativo",bloqueado:false,especialidades:[],tipo:"Mensal"};
+  const ESPECIALIDADES=["Neuro","Psico","Fono","Reforço","Nutrição"];
+  const toggleEsp=e=>setForm(p=>{const l=p.especialidades||[];return {...p,especialidades:l.includes(e)?l.filter(x=>x!==e):[...l,e]};});
+  // Novo cliente -> aba "Clientes" da planilha (via backend -> Apps Script). Não bloqueia o cadastro se falhar.
+  const enviarClientePlanilha=(c)=>{
+    const cfg=loadConfig();
+    if(!cfg.backendUrl||!cfg.planilhaToken) return;
+    fetch(`${cfg.backendUrl.trim()}/api/planilha-cliente`,{method:"POST",
+      headers:{"Content-Type":"application/json","x-planilha-token":cfg.planilhaToken},
+      body:JSON.stringify({id:String(c.id),aluno:c.nomeAluno,especialidades:c.especialidades||[],tipo:c.tipo||"",responsavel:c.nome,cpf:c.cpf,
+        endereco:c.endereco,numero:c.numero||"",complemento:c.complemento||"",bairro:c.bairro,cidade:c.cidade,uf:c.estado,cep:c.cep,telefone:c.telefone,email:c.email})})
+      .then(r=>r.json()).then(j=>{ if(!j.ok) toast("⚠️ Cliente não incluído na planilha: "+(j.erro||"erro"),5000); })
+      .catch(()=>toast("⚠️ Cliente não incluído na planilha (backend indisponível)",5000));
+  };
   const [form,setForm]=useState(emptyForm);
   const f=k=>e=>setForm(p=>({...p,[k]:e.target.value}));
 
@@ -1615,8 +1628,8 @@ function Clientes({clientes,setClientes,cobrancas,apiIntegrado,callApi,toast}) {
             email: form.email || "",
             mobilePhone: form.telefone ? form.telefone.replace(/\D/g,"") : "",
             address: form.endereco || "",
-            addressNumber: "",
-            complement: "",
+            addressNumber: form.numero || "",
+            complement: form.complemento || "",
             province: form.bairro || "",
             city: form.cidade || "",
             state: form.estado || "SC",
@@ -1635,7 +1648,7 @@ function Clientes({clientes,setClientes,cobrancas,apiIntegrado,callApi,toast}) {
 
     const clienteData = {...form, asaasId};
     if(editing) setClientes(p=>p.map(c=>c.id===editing?{...clienteData,id:editing}:c));
-    else setClientes(p=>[...p,{...clienteData,id:Date.now()}]);
+    else { const novo={...clienteData,id:Date.now()}; setClientes(p=>[...p,novo]); enviarClientePlanilha(novo); }
 
     setModal(false);
     setSalvando(false);
@@ -1685,12 +1698,27 @@ function Clientes({clientes,setClientes,cobrancas,apiIntegrado,callApi,toast}) {
               <Inp label={buscandoCep?"CEP (buscando...)":"CEP"} value={form.cep} onChange={handleCep} placeholder="00000-000"/>
               {buscandoCep && <span style={{position:"absolute",right:10,top:32,fontSize:16}}>🔄</span>}
             </div>
-            <Inp label="Endereço (Rua e Número)" value={form.endereco} onChange={f("endereco")}/>
+            <Inp label="Endereço (Rua)" value={form.endereco} onChange={f("endereco")}/>
+            <Inp label="Nº" value={form.numero||""} onChange={f("numero")}/>
+            <Inp label="Complemento" value={form.complemento||""} onChange={f("complemento")}/>
             <Inp label="Bairro" value={form.bairro} onChange={f("bairro")}/>
             <Inp label="Cidade" value={form.cidade} onChange={f("cidade")}/>
             <Sel label="Estado" value={form.estado} onChange={f("estado")}>
               {["SP","RJ","MG","RS","PR","SC","BA","CE","PE","GO","DF"].map(s=><option key={s}>{s}</option>)}
             </Sel>
+            <Sel label="Tipo de atendimento" value={form.tipo||""} onChange={f("tipo")}>
+              {["Mensal","Semanal","Quinzenal","Teste"].map(t=><option key={t}>{t}</option>)}
+            </Sel>
+            <div className="form-group" style={{gridColumn:"1 / -1"}}>
+              <label className="form-label">Especialidades (uma linha por especialidade na aba Clientes da planilha)</label>
+              <div style={{display:"flex",gap:14,flexWrap:"wrap"}}>
+                {ESPECIALIDADES.map(e=>(
+                  <label key={e} style={{display:"flex",alignItems:"center",gap:6,fontSize:13,cursor:"pointer"}}>
+                    <input type="checkbox" checked={(form.especialidades||[]).includes(e)} onChange={()=>toggleEsp(e)}/>{e}
+                  </label>
+                ))}
+              </div>
+            </div>
           </div>
           <div className="modal-actions">
             <button className="btn sec" onClick={()=>setModal(false)}>Cancelar</button>
