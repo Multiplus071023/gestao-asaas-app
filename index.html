@@ -5525,19 +5525,36 @@ function CobrancasLocais({clientes,subcontas,terapeutas,receber,setReceber,pagar
   };
   const marcarRecebido=cob=>{
     const hoje=new Date().toISOString().slice(0,10);
-    setConfirmBaixa({cob, data:hoje});
+    const falta=Math.max(0,+(+cob.valor-(+cob.valorRecebido||0)).toFixed(2));
+    setConfirmBaixa({cob, data:hoje, valor:String(falta)});
+  };
+  // Avisa a planilha de cobrança (via backend -> Apps Script). Não bloqueia a baixa se falhar.
+  const enviarBaixaPlanilha=(cob,dt,valorPago)=>{
+    const cfg=loadConfig();
+    if(!cfg.backendUrl||!cfg.planilhaToken) return;
+    fetch(`${cfg.backendUrl.trim()}/api/planilha-baixa`,{method:"POST",
+      headers:{"Content-Type":"application/json","x-planilha-token":cfg.planilhaToken},
+      body:JSON.stringify({id:String(cob.id),cliente:cob.cliente,descricao:cob.descricao,valor:+cob.valor,valorPago,data:dt})})
+      .then(r=>r.json()).then(j=>{ if(!j.ok) toast("⚠️ Planilha não atualizada: "+(j.erro||"erro"),5000); })
+      .catch(()=>toast("⚠️ Planilha não atualizada (backend indisponível)",5000));
   };
   const confirmarBaixaLocal=()=>{
     if(!confirmBaixa) return;
     const {cob, data:dt} = confirmBaixa;
-    const _cobs=(stateRef?.current?.coblocal||cobLocais||[]).map(x=>x.id===cob.id?{...x,status:"RECEIVED"}:x);
-    const _rec=(stateRef?.current?.receber||receber||[]).map(r=>r.cobLocalId===cob.id?{...r,status:"recebido",dataPagamento:dt}:r);
-    const _pag=(stateRef?.current?.pagar||pagar||[]).map(p=>p.cobLocalId===cob.id?{...p,status:"pago",dataPagamento:dt}:p);
+    const recebidoAntes=+cob.valorRecebido||0;
+    const agora=+String(confirmBaixa.valor||"").replace(",",".");
+    if(!(agora>0)){toast("⚠️ Informe o valor recebido");return;}
+    const acumulado=+(recebidoAntes+agora).toFixed(2);
+    const integral=acumulado>=+cob.valor-0.01;
+    const _cobs=(stateRef?.current?.coblocal||cobLocais||[]).map(x=>x.id===cob.id?{...x,status:integral?"RECEIVED":x.status,valorRecebido:acumulado}:x);
+    const _rec=integral?(stateRef?.current?.receber||receber||[]).map(r=>r.cobLocalId===cob.id?{...r,status:"recebido",dataPagamento:dt}:r):(stateRef?.current?.receber||receber||[]);
+    const _pag=integral?(stateRef?.current?.pagar||pagar||[]).map(p=>p.cobLocalId===cob.id?{...p,status:"pago",dataPagamento:dt}:p):(stateRef?.current?.pagar||pagar||[]);
     lsSet("coblocal",_cobs); setCobLocaisRaw(_cobs);
     lsSet("receber",_rec);   setReceberRaw(_rec);
     lsSet("pagar",_pag);     setPagarRaw(_pag);
     fbWriteMulti(dbRef?.current,{coblocal:_cobs, receber:_rec, pagar:_pag});
-    toast("✅ Cobrança marcada como recebida!");
+    enviarBaixaPlanilha(cob,dt,acumulado);
+    toast(integral?"✅ Cobrança marcada como recebida!":`✅ Recebimento parcial registrado (${fmt(acumulado)} de ${fmt(cob.valor)})`);
     setConfirmBaixa(null);
   };
 
@@ -5580,6 +5597,12 @@ function CobrancasLocais({clientes,subcontas,terapeutas,receber,setReceber,pagar
             <div style={{display:"flex",flexDirection:"column",gap:6}}>
               <label style={{fontSize:13,color:"var(--text2)",fontWeight:500}}>Data do Pagamento</label>
               <input type="date" value={confirmBaixa.data} onChange={e=>setConfirmBaixa(p=>({...p,data:e.target.value}))} style={{padding:"8px 12px",borderRadius:8,border:"1.5px solid var(--border)",background:"var(--bg)",color:"var(--text1)",fontSize:14,outline:"none"}}/>
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:6}}>
+              <label style={{fontSize:13,color:"var(--text2)",fontWeight:500}}>Valor recebido agora</label>
+              <input type="number" step="0.01" min="0" value={confirmBaixa.valor} onChange={e=>setConfirmBaixa(p=>({...p,valor:e.target.value}))} style={{padding:"8px 12px",borderRadius:8,border:"1.5px solid var(--border)",background:"var(--bg)",color:"var(--text1)",fontSize:14,outline:"none"}}/>
+              {(+confirmBaixa.cob.valorRecebido||0)>0&&<div style={{fontSize:12,color:"var(--text3)"}}>Já recebido antes: {fmt(confirmBaixa.cob.valorRecebido)}</div>}
+              <div style={{fontSize:12,color:"var(--text3)"}}>Valor menor que o total registra pagamento parcial; a cobrança só é baixada quando o total for recebido.</div>
             </div>
             <div style={{display:"flex",gap:10,justifyContent:"flex-end",marginTop:4}}>
               <button className="btn sec" onClick={()=>setConfirmBaixa(null)} style={{minWidth:90}}>Cancelar</button>
@@ -5720,7 +5743,7 @@ function CobrancasLocais({clientes,subcontas,terapeutas,receber,setReceber,pagar
                   <td style={{fontSize:12,color:"var(--text2)"}}>{aluno}</td>
                   <td style={{maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontSize:13}}>{c.descricao}</td>
                   <td><span style={{fontSize:11,background:"var(--bg3)",padding:"2px 8px",borderRadius:10,color:"var(--text2)"}}>{c.formaPagamento}</span></td>
-                  <td style={{fontWeight:700,color:"var(--green)"}}>{fmt(c.valor)}</td>
+                  <td style={{fontWeight:700,color:"var(--green)"}}>{fmt(c.valor)}{c.status!=="RECEIVED"&&(+c.valorRecebido||0)>0&&<div style={{fontSize:11,fontWeight:500,color:"var(--yellow)"}}>Parcial: {fmt(c.valorRecebido)}</div>}</td>
                   <td>
                     <div>{fmtDate(c.vencimento)}</div>
                     {venceu&&<div style={{fontSize:11,color:"var(--red)"}}>Vencido há {Math.abs(d)}d</div>}
@@ -7123,6 +7146,8 @@ function Configuracoes({toast,clientes,setClientes,terapeutas,setTerapeutas,subc
               Sem o <code>/health</code> no final. Exemplo: <code style={{color:"var(--accent2)"}}>https://gestao-asaas-backend.up.railway.app</code>
             </div>
           </div>
+
+          <Inp label="Token da planilha de cobrança" placeholder="mesmo valor de PLANILHA_APP_TOKEN no Vercel" value={cfg.planilhaToken||""} onChange={e=>upd("planilhaToken",e.target.value)} type="password"/>
 
           {/* Endpoint */}
           <div style={{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8,padding:"10px 14px",fontSize:12,color:"var(--text3)"}}>
